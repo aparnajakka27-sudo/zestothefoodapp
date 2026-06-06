@@ -1,7 +1,162 @@
-import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ThumbsUp, ThumbsDown, Users, CheckCircle, Clock } from 'lucide-react'
+import React, { useState } from 'react'
+import { motion, AnimatePresence, useMotionValue, useTransform, useMotionValueEvent } from 'framer-motion'
+import { ChevronLeft, Flame, X, Users, CheckCircle } from 'lucide-react'
 import { useRoomStore } from '../lib/roomStore'
+import type { Dish } from '../types'
+
+// SwipeCard Sub-component for Tinder-like swiping
+const SwipeCard: React.FC<{
+  dish: Dish
+  onSwipe: (id: string, vote: 'continue' | 'skip') => void
+  choosers: string[]
+}> = ({ dish, onSwipe, choosers }) => {
+  const x = useMotionValue(0)
+  const rotate = useTransform(x, [-200, 200], [-12, 12])
+  const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0.5, 1, 1, 1, 0.5])
+  const [swipeDirection, setSwipeDirection] = useState<'right' | 'left' | null>(null)
+  
+  // Local animation control for button clicks
+  const [exitX, setExitX] = useState<number | null>(null)
+
+  useMotionValueEvent(x, "change", (latest) => {
+    if (latest > 50) setSwipeDirection('right')
+    else if (latest < -50) setSwipeDirection('left')
+    else setSwipeDirection(null)
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleDragEnd = (_event: any, info: any) => {
+    if (info.offset.x > 120) {
+      onSwipe(dish.id, 'continue')
+    } else if (info.offset.x < -120) {
+      onSwipe(dish.id, 'skip')
+    }
+  }
+
+  const handleBtnClick = (dir: 'continue' | 'skip') => {
+    setExitX(dir === 'continue' ? 300 : -300)
+    setTimeout(() => {
+      onSwipe(dish.id, dir)
+    }, 200)
+  }
+
+  return (
+    <motion.div
+      style={{ x: exitX !== null ? exitX : x, rotate, opacity }}
+      drag={exitX !== null ? false : "x"}
+      dragConstraints={{ left: 0, right: 0 }}
+      onDragEnd={handleDragEnd}
+      animate={exitX !== null ? { x: exitX, opacity: 0, scale: 0.95 } : { x: 0, rotate: 0, opacity: 1, scale: 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      className="absolute inset-0 bg-white border border-[#ECE6DD] rounded-[28px] p-6 flex flex-col justify-between shadow-[0_10px_30px_-10px_rgba(0,0,0,0.06)] cursor-grab active:cursor-grabbing text-left select-none overflow-hidden"
+    >
+      {/* Visual Direction Labels overlay */}
+      <AnimatePresence>
+        {swipeDirection === 'right' && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute top-8 right-8 border-4 border-emerald-500 text-emerald-500 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-xl rotate-12 z-20"
+          >
+            Let's order! 🔥
+          </motion.div>
+        )}
+        {swipeDirection === 'left' && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute top-8 left-8 border-4 border-rose-500 text-rose-500 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-xl -rotate-12 z-20"
+          >
+            Skip ❌
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Dish Image section */}
+      <div className="w-full h-[180px] rounded-2xl overflow-hidden border border-[#ECE6DD] relative">
+        <img src={dish.image} alt={dish.name} className="w-full h-full object-cover" />
+        <div className="absolute top-3 right-3 bg-white/95 border border-[#ECE6DD] py-1 px-3 rounded-xl text-xs font-black text-[#FF7A30] font-sans shadow-sm">
+          {dish.price}
+        </div>
+      </div>
+
+      {/* Dish Meta details */}
+      <div className="flex-1 mt-4 flex flex-col justify-between">
+        <div>
+          <div className="flex justify-between items-start">
+            <h3 className="text-sm font-black text-[#1E1E1E] tracking-tight">{dish.name}</h3>
+            {dish.isVeg ? (
+              <span className="bg-emerald-50 text-emerald-600 border border-emerald-100 text-[8px] font-bold uppercase px-1.5 py-0.5 rounded">Veg</span>
+            ) : (
+              <span className="bg-rose-50 text-rose-600 border border-rose-100 text-[8px] font-bold uppercase px-1.5 py-0.5 rounded">Non-Veg</span>
+            )}
+          </div>
+          
+          <p className="text-[10.5px] text-[#6D6D6D] mt-1.5 font-medium leading-relaxed">
+            Chosen by: <span className="text-[#FF7A30] font-bold">{choosers.join(', ')}</span>
+          </p>
+          
+          <p className="text-[10px] text-[#8B8B8B] font-semibold mt-1 leading-normal italic">
+            {dish.description || 'A delicious crowd favorite selected for your food squad session.'}
+          </p>
+        </div>
+
+        {/* Action Buttons panel */}
+        <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-[#ECE6DD]">
+          <button
+            onClick={() => handleBtnClick('skip')}
+            className="py-2.5 rounded-full border border-[#ECE6DD] bg-[#FAF7F2] hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 text-[#6D6D6D] text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+          >
+            <X className="w-4 h-4 text-rose-500" /> Skip Card
+          </button>
+          <button
+            onClick={() => handleBtnClick('continue')}
+            className="py-2.5 rounded-full border border-none bg-gradient-to-r from-[#FF7A30] to-[#FF8C42] text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+          >
+            <Flame className="w-4 h-4 text-white" /> Add Dish
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+// Confetti Particle System for results screen
+const ConfettiRain: React.FC = () => {
+  const pieces = React.useMemo(() => {
+    const colors = ['bg-[#FF7A30]', 'bg-[#FF8C42]', 'bg-amber-400', 'bg-emerald-400', 'bg-indigo-400', 'bg-rose-400']
+    return Array.from({ length: 40 }).map((_, i) => {
+      const randX = Math.random() * 100 // left%
+      const randDelay = Math.random() * 2 // seconds delay
+      const randDuration = 1.5 + Math.random() * 1.5 // seconds duration
+      const randSize = 6 + Math.floor(Math.random() * 6) // px width/height
+      const colorClass = colors[Math.floor(Math.random() * colors.length)]
+      return { id: i, randX, randDelay, randDuration, randSize, colorClass }
+    })
+  }, [])
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-30">
+      {pieces.map((piece) => (
+        <motion.div
+          key={piece.id}
+          initial={{ y: -20, x: `${piece.randX}%`, rotate: 0, opacity: 1 }}
+          animate={{ y: 550, rotate: 360, opacity: 0 }}
+          transition={{
+            duration: piece.randDuration,
+            delay: piece.randDelay,
+            ease: 'easeOut',
+            repeat: Infinity
+          }}
+          style={{ width: piece.randSize, height: piece.randSize }}
+          className={`absolute rounded-sm ${piece.colorClass}`}
+        />
+      ))}
+    </div>
+  )
+}
 
 export const VotingRound: React.FC = () => {
   const {
@@ -50,161 +205,251 @@ export const VotingRound: React.FC = () => {
     return { continueCount, skipCount, totalCount }
   }
 
-  // Check if all votes have been cast
-  const isVotingComplete = selectedDishes.every(dish => {
-    const { totalCount } = getVoteCounts(dish.id)
-    return totalCount >= members.length
+  // derive what dishes the user still needs to swipe
+  const unvotedDishes = selectedDishes.filter(dish => !dishVotes[dish.id]?.['user'])
+  const swipedCount = selectedDishes.length - unvotedDishes.length
+
+  // Filter squad approved dishes (continue votes >= skip votes) vs rejected dishes
+  const approvedDishes: Dish[] = []
+  const rejectedDishes: Dish[] = []
+
+  selectedDishes.forEach(dish => {
+    const { continueCount, skipCount } = getVoteCounts(dish.id)
+    if (continueCount >= skipCount) {
+      approvedDishes.push(dish)
+    } else {
+      rejectedDishes.push(dish)
+    }
   })
+
+  // Calculate global group progress
+  const totalPossibleVotes = selectedDishes.length * members.length
+  let totalCastVotes = 0
+  selectedDishes.forEach(dish => {
+    const { totalCount } = getVoteCounts(dish.id)
+    totalCastVotes += totalCount
+  })
+  const progressPercent = totalPossibleVotes > 0 ? Math.round((totalCastVotes / totalPossibleVotes) * 100) : 0
+  const membersVotedCount = members.filter(m => {
+    // Member has voted if they have cast a vote on all selected dishes
+    return selectedDishes.every(dish => dishVotes[dish.id]?.[m.id])
+  }).length
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      className="w-full max-w-xl mx-auto px-4 py-6 text-left relative z-10 flex flex-col gap-6 text-[#1E1E1E]"
+      className="w-full max-w-xl mx-auto px-4 py-4 text-left relative z-10 flex flex-col gap-5 text-[#1E1E1E]"
     >
       {/* Header */}
       <div className="flex justify-between items-center z-10 border-b border-[#ECE6DD] pb-3">
         <button
           onClick={resetRound}
-          className="flex items-center gap-1 text-[11px] font-bold tracking-wider text-[#6D6D6D] hover:text-[#1E1E1E] transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-[11px] font-black tracking-wider text-[#6D6D6D] hover:text-[#1E1E1E] transition-colors cursor-pointer uppercase"
         >
           <ChevronLeft className="w-4 h-4" /> Cancel session
         </button>
-        <span className="text-[#FF7A30] text-[10px] font-bold tracking-wider bg-[#FF7A30]/5 px-2.5 py-0.5 rounded border border-[#FF7A30]/10">
+        <span className="text-[#FF7A30] text-[10px] font-black tracking-wider uppercase bg-[#FF7A30]/5 px-2.5 py-0.5 rounded border border-[#FF7A30]/10">
           Step 4 of 5
         </span>
       </div>
 
+      {/* Swipe ballot Header */}
       <div className="z-10 space-y-1.5">
-        <span className="text-[#FF7A30] text-[10px] font-bold tracking-wider block">
-          Multiplayer ballot
+        <span className="text-[#FF7A30] text-[10px] font-bold tracking-wider block uppercase">
+          Squad Swiper ballot
         </span>
-        <h1 className="text-2xl font-black text-[#1E1E1E] tracking-tight">
-          Vote with your friends
+        <h1 className="text-2xl font-black text-[#1E1E1E] tracking-tight leading-none">
+          {unvotedDishes.length > 0 ? 'Swipe with your squad 🍽' : 'Consensus results 🔥'}
         </h1>
-        <p className="text-[11px] text-[#6D6D6D] font-medium">
-          Continue or remove dishes together.
+        <p className="text-[11px] text-[#6D6D6D] font-semibold">
+          {unvotedDishes.length > 0 
+            ? 'Swipe dishes left to Skip or right to Add. Decide together.' 
+            : 'Here is what the squad approved for order finalization.'}
         </p>
       </div>
 
-      {/* List of Dishes for Voting */}
-      <div className="flex flex-col gap-4 max-h-[360px] overflow-y-auto pr-1 z-10">
+      {/* Live Voting Progress Bar */}
+      {selectedDishes.length > 0 && (
+        <div className="bg-white border border-[#ECE6DD] p-3.5 rounded-2xl shadow-sm z-10 space-y-2 text-left">
+          <div className="flex justify-between items-center text-[10px] font-bold text-[#6D6D6D]">
+            <span className="flex items-center gap-1">
+              <Users className="w-3.5 h-3.5 text-[#FF7A30]" /> 
+              {membersVotedCount} / {members.length} friends voted
+            </span>
+            <span>{progressPercent}% Complete</span>
+          </div>
+          
+          <div className="w-full h-1.5 bg-[#FAF7F2] rounded-full overflow-hidden border border-[#ECE6DD]/60">
+            <motion.div 
+              className="h-full bg-gradient-to-r from-[#FF7A30] to-[#FF8C42]" 
+              animate={{ width: `${progressPercent}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+
+          {/* Quick Avatar list indicators */}
+          <div className="flex gap-1.5 pt-1 items-center">
+            <span className="text-[9px] text-[#8B8B8B] font-bold uppercase tracking-wider mr-1">Voters:</span>
+            {members.map(m => {
+              const hasFinished = selectedDishes.every(dish => dishVotes[dish.id]?.[m.id])
+              return (
+                <div 
+                  key={m.id} 
+                  title={`${m.name} (${hasFinished ? 'Voted' : 'Voting...'})`}
+                  className={`w-5 h-5 rounded-full text-[8px] font-black text-white uppercase flex items-center justify-center border transition-all ${
+                    hasFinished ? 'bg-[#4CAF50] border-[#4CAF50] scale-105' : `${m.avatarColor || 'bg-[#FF7A30]'} border-[#ECE6DD] opacity-65`
+                  }`}
+                >
+                  {hasFinished ? '✓' : m.name.charAt(0)}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Center Action Zone: Swiper Deck OR Consensus results */}
+      <div className="z-10 relative flex justify-center items-center">
         {selectedDishes.length === 0 ? (
-          <div className="text-center py-10 text-[#8B8B8B] text-xs font-medium">
+          <div className="bg-white border border-[#ECE6DD] p-10 rounded-[28px] w-full text-center text-[#8B8B8B] text-xs font-semibold shadow-sm">
             No dishes were chosen by the group.
           </div>
+        ) : unvotedDishes.length > 0 ? (
+          /* ACTIVE TINDER DECK */
+          <div className="w-full max-w-sm h-[380px] relative">
+            {unvotedDishes.slice(0, 3).reverse().map((dish, idx, arr) => {
+              // Create offset stack layers
+              const stackIndex = arr.length - 1 - idx
+              return (
+                <div 
+                  key={dish.id} 
+                  className="absolute inset-0"
+                  style={{
+                    transform: `translateY(${stackIndex * 10}px) scale(${1 - stackIndex * 0.045})`,
+                    zIndex: 50 - stackIndex,
+                    pointerEvents: stackIndex === 0 ? 'auto' : 'none',
+                    opacity: 1 - stackIndex * 0.25,
+                    transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                  }}
+                >
+                  <SwipeCard 
+                    dish={dish} 
+                    onSwipe={castGroupVote} 
+                    choosers={getChoosers(dish.id)} 
+                  />
+                </div>
+              )
+            })}
+          </div>
         ) : (
-          selectedDishes.map((dish) => {
-            const votes = dishVotes[dish.id] || {}
-            const userVote = votes['user']
-            const choosers = getChoosers(dish.id)
-            const { continueCount, skipCount, totalCount } = getVoteCounts(dish.id)
+          /* CONSENSUS RESULTS VIEW WITH CONFETTI */
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full bg-white border border-[#ECE6DD] p-6 rounded-[28px] shadow-sm text-left relative overflow-hidden"
+          >
+            {/* Play confetti rain overlay */}
+            <ConfettiRain />
 
-            return (
-              <motion.div
-                key={dish.id}
-                layoutId={`voting-card-${dish.id}`}
-                className={`p-4 bg-[#FFFFFF] border rounded-2xl flex flex-col gap-3.5 relative transition-all duration-200 shadow-sm ${
-                  userVote === 'continue' ? 'border-[#4CAF50]/30 bg-[#4CAF50]/5' : userVote === 'skip' ? 'border-[#E85D5D]/30 bg-[#E85D5D]/5' : 'border-[#ECE6DD]'
-                }`}
-              >
-                {/* Top: Image + Info */}
-                <div className="flex gap-4 items-start">
-                  <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-[#ECE6DD]">
-                    <img src={dish.image} alt={dish.name} className="w-full h-full object-cover" />
-                  </div>
+            {/* Approved list */}
+            <div className="space-y-4 relative z-10">
+              <span className="text-[10px] font-black text-[#6D6D6D] uppercase tracking-wider border-b border-[#ECE6DD] pb-1.5 block">
+                🔥 Squad Approved Orders ({approvedDishes.length})
+              </span>
+              
+              {approvedDishes.length === 0 ? (
+                <div className="p-4 text-[#8B8B8B] text-xs font-semibold text-center bg-[#FAF7F2] rounded-2xl border border-dashed border-[#ECE6DD]">
+                  No dishes got majority approval.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5 max-h-[180px] overflow-y-auto pr-1">
+                  {approvedDishes.map(d => {
+                    const { continueCount } = getVoteCounts(d.id)
+                    return (
+                      <div key={d.id} className="flex justify-between items-center p-3 bg-emerald-50/20 border border-emerald-100 rounded-2xl">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <CheckCircle className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
+                          <span className="text-xs font-bold text-[#1E1E1E] truncate">{d.name}</span>
+                        </div>
+                        <span className="text-[10px] font-black text-[#4CAF50] bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 shrink-0">
+                          {continueCount} Votes
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-xs font-bold text-[#1E1E1E] tracking-wide truncate pr-1">
-                        {dish.name}
-                      </h3>
-                      <span className="text-xs font-bold text-[#FF7A30] font-sans shrink-0">{dish.price}</span>
-                    </div>
-
-                    <p className="text-[10px] text-[#6D6D6D] leading-relaxed mt-0.5 mb-1.5 font-medium">
-                      Chosen by: <span className="text-[#FF7A30] font-bold">{choosers.join(', ')}</span>
-                    </p>
-
-                    {/* Progress indicator */}
-                    <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#8B8B8B]">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{totalCount} / {members.length} members voted</span>
-                      <span className="text-[#ECE6DD]">•</span>
-                      <span className="text-[#4CAF50]">{continueCount} Keep</span>
-                      <span className="text-[#ECE6DD]">•</span>
-                      <span className="text-[#E85D5D]">{skipCount} Skip</span>
-                    </div>
+              {/* Rejected list */}
+              {rejectedDishes.length > 0 && (
+                <div className="space-y-2.5 pt-2">
+                  <span className="text-[10px] font-black text-[#6D6D6D] uppercase tracking-wider pb-1 block">
+                    ❌ Skipped / Rejected ({rejectedDishes.length})
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {rejectedDishes.map(d => (
+                      <div key={d.id} className="px-3 py-1.5 bg-rose-50/25 border border-rose-100/50 rounded-xl text-[10px] font-bold text-rose-500 flex items-center gap-1 opacity-75">
+                        <X className="w-3.5 h-3.5 text-rose-500 stroke-[2.5]" />
+                        <span className="truncate max-w-[120px]">{d.name}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-
-                {/* Bottom: 👍/👎 Action Buttons */}
-                <div className="grid grid-cols-2 gap-3 border-t border-[#ECE6DD] pt-3">
-                  <button
-                    onClick={() => castGroupVote(dish.id, 'skip')}
-                    className={`py-2 rounded-xl border text-[10px] font-bold tracking-wide flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      userVote === 'skip'
-                        ? 'bg-[#E85D5D]/10 border-[#E85D5D]/30 text-[#E85D5D]'
-                        : 'bg-[#F4EFE8] border-[#ECE6DD] text-[#6D6D6D] hover:bg-[#E85D5D]/5 hover:text-[#E85D5D] hover:border-[#E85D5D]/30 shadow-sm'
-                    }`}
-                  >
-                    <ThumbsDown className="w-3.5 h-3.5" /> Skip
-                  </button>
-
-                  <button
-                    onClick={() => castGroupVote(dish.id, 'continue')}
-                    className={`py-2 rounded-xl border text-[10px] font-bold tracking-wide flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      userVote === 'continue'
-                        ? 'bg-[#4CAF50]/10 border-[#4CAF50]/30 text-[#4CAF50]'
-                        : 'bg-[#F4EFE8] border-[#ECE6DD] text-[#6D6D6D] hover:bg-[#4CAF50]/5 hover:text-[#4CAF50] hover:border-[#4CAF50]/30 shadow-sm'
-                    }`}
-                  >
-                    <ThumbsUp className="w-3.5 h-3.5" /> Keep
-                  </button>
-                </div>
-              </motion.div>
-            )
-          })
+              )}
+            </div>
+          </motion.div>
         )}
       </div>
 
-      {/* Real-time sync logs feed */}
-      <div className="z-10 bg-[#FFFFFF] border border-[#ECE6DD] p-4 rounded-2xl flex flex-col gap-2 shadow-sm">
-        <span className="text-[9px] font-bold text-[#8B8B8B] tracking-wider flex items-center gap-1 border-b border-[#ECE6DD] pb-1">
-          <Users className="w-3.5 h-3.5 text-[#FF7A30]" /> Live ballot activity feed
-        </span>
-        <div className="flex flex-col gap-1.5 max-h-[85px] overflow-y-auto pr-1 select-none font-mono text-[9px] font-medium text-[#6D6D6D]">
-          <AnimatePresence>
-            {voteStatusLogs.slice(-4).map((log, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center gap-1 uppercase tracking-wider"
-              >
-                <span className="text-[#FF7A30] shrink-0">&gt;</span>
-                <span>{log}</span>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+      {/* Swipe Cards Indicators Guide */}
+      {unvotedDishes.length > 0 && (
+        <div className="z-10 flex justify-between items-center text-[9.5px] font-bold text-[#8B8B8B] px-4 uppercase tracking-wider select-none">
+          <span>← Swipe Left to Skip</span>
+          <span>Card {swipedCount + 1} of {selectedDishes.length}</span>
+          <span>Swipe Right to Add →</span>
         </div>
-      </div>
+      )}
 
-      {/* Continue trigger */}
+      {/* Real-time status logs activity feed */}
+      {unvotedDishes.length > 0 && (
+        <div className="z-10 bg-[#FFFFFF] border border-[#ECE6DD] p-4 rounded-2xl flex flex-col gap-2 shadow-sm">
+          <span className="text-[9px] font-bold text-[#8B8B8B] tracking-wider flex items-center gap-1 border-b border-[#ECE6DD] pb-1">
+            <Users className="w-3.5 h-3.5 text-[#FF7A30]" /> Live ballot activity feed
+          </span>
+          <div className="flex flex-col gap-1.5 max-h-[85px] overflow-y-auto pr-1 select-none font-mono text-[9px] font-medium text-[#6D6D6D]">
+            <AnimatePresence>
+              {voteStatusLogs.slice(-4).map((log, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-1 uppercase tracking-wider"
+                >
+                  <span className="text-[#FF7A30] shrink-0">&gt;</span>
+                  <span>{log}</span>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+      )}
+
+      {/* Continue CTA */}
       <div className="z-10">
         <button
           onClick={confirmVotingRound}
-          className={`w-full py-3.5 border-none font-bold tracking-wider text-[11px] rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 font-sans text-white ${
-            isVotingComplete 
-              ? 'bg-[#4CAF50] hover:bg-[#45a049]' 
+          className={`w-full py-3.5 border-none font-bold tracking-wider text-[11px] uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 font-sans text-white ${
+            unvotedDishes.length === 0
+              ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/10' 
               : 'bg-gradient-to-r from-[#FF7A30] to-[#FF8C42] hover:scale-[1.01] active:scale-[0.99]'
           }`}
         >
-          {isVotingComplete ? (
+          {unvotedDishes.length === 0 ? (
             <>
-              <CheckCircle className="w-4 h-4 text-white" /> View final squad order
+              <CheckCircle className="w-4.5 h-4.5 text-white" /> Confirm & Split Bill
             </>
           ) : (
             'Continue to bill split anyway'

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { RoomScreen, Member, Restaurant, Dish } from '../types'
+import type { RoomScreen, Member, Restaurant, Dish, Message } from '../types'
 import { fetchRestaurants, fetchRestaurantMenu } from '../services/googleMaps'
 import { connectSocket, getSocket } from '../services/socket'
 import { authService } from './authService'
@@ -35,7 +35,7 @@ interface RoomState {
   detectedAreaName: string | null
 
   // Optional Authentication
-  user: { name: string; email: string; avatarUrl?: string } | null
+  user: AuthUser | null
   authLoading: boolean
   authError: string | null
   guestName: string | null
@@ -43,6 +43,15 @@ interface RoomState {
   pendingRoomCode: string | null
   setGuestName: (name: string) => void
   setPendingRoomCode: (code: string | null) => void
+
+  // Group Chat & Profile Activity
+  chatMessages: Message[]
+  chatDrawerOpen: boolean
+  isFriendTyping: string | null
+  unreadChatCount: number
+  sendChatMessage: (text?: string, sticker?: string) => void
+  toggleChatDrawer: (val?: boolean) => void
+  simulateFriendChatActivity: () => void
 
   // Lobby code & sharing
   roomCode: string
@@ -191,6 +200,22 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   onboardingNextScreen: null,
   pendingRoomCode: null,
 
+  // Group Chat initial state
+  chatMessages: [
+    {
+      id: 'system-1',
+      senderId: 'system',
+      senderName: 'System',
+      avatarColor: 'bg-[#FF7A30]',
+      text: 'Food Squad lobby created! Start adding dishes to decide what to eat.',
+      timestamp: new Date().toISOString(),
+      isSystem: true
+    }
+  ],
+  chatDrawerOpen: false,
+  isFriendTyping: null,
+  unreadChatCount: 0,
+
   roomCode: '',
   inviteLink: '',
   members: [],
@@ -220,6 +245,99 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     set({ guestName })
   },
   setPendingRoomCode: (pendingRoomCode) => set({ pendingRoomCode }),
+  
+  toggleChatDrawer: (val) => set((state) => {
+    const nextVal = val !== undefined ? val : !state.chatDrawerOpen
+    return { 
+      chatDrawerOpen: nextVal, 
+      unreadChatCount: nextVal ? 0 : state.unreadChatCount 
+    }
+  }),
+
+  sendChatMessage: (text, sticker) => {
+    const state = get()
+    const currentUser = state.user
+    const guest = state.guestName
+    
+    if (!currentUser && !guest) return
+    
+    const senderName = currentUser ? currentUser.name : guest || 'You'
+    const newMessage: Message = {
+      id: `msg-${Date.now()}`,
+      senderId: 'user',
+      senderName,
+      avatarColor: 'bg-[#FF7A30]',
+      text,
+      sticker,
+      timestamp: new Date().toISOString()
+    }
+    
+    set((state) => ({
+      chatMessages: [...state.chatMessages, newMessage],
+      unreadChatCount: 0
+    }))
+    
+    // Auto simulate friend responses after user message
+    setTimeout(() => {
+      get().simulateFriendChatActivity()
+    }, 1500)
+  },
+
+  simulateFriendChatActivity: () => {
+    const state = get()
+    if (state.screen === 'landing') return
+    
+    const activeMembers = state.members.filter(m => !m.isUser)
+    if (activeMembers.length === 0) return
+    
+    const randomFriend = activeMembers[Math.floor(Math.random() * activeMembers.length)]
+    
+    // Trigger typing indicator
+    set({ isFriendTyping: `${randomFriend.name} is typing...` })
+    
+    setTimeout(() => {
+      const phrases = [
+        "Bro order this Chicken Biryani, I'm starving! 🤤",
+        "Must try the Butter Chicken from Mehfil!",
+        "Skip the soup guys, let's get main course.",
+        "Too expensive? I have a coupon SQUAD300!",
+        "Order more naans, 4 naans won't be enough.",
+        "Paneer is fine for me, but let's add some non-veg too.",
+        "Is anyone veg? Let's check.",
+        "I'm okay with anything, you guys decide!"
+      ]
+      
+      const stickers = [
+        '🍗 "Bro order this"',
+        '🔥 "Must try"',
+        '😭 "Too expensive"',
+        '🤤 "Looks tasty"',
+        '🍽 "I’m hungry"',
+        '😤 "Stop changing dishes"',
+        '😂 "Anything is fine"'
+      ]
+      
+      const sendSticker = Math.random() > 0.6
+      const randomText = sendSticker ? undefined : phrases[Math.floor(Math.random() * phrases.length)]
+      const randomSticker = sendSticker ? stickers[Math.floor(Math.random() * stickers.length)] : undefined
+      
+      const friendMessage: Message = {
+        id: `msg-${Date.now()}`,
+        senderId: randomFriend.id,
+        senderName: randomFriend.name,
+        avatarColor: randomFriend.avatarColor,
+        text: randomText,
+        sticker: randomSticker,
+        timestamp: new Date().toISOString()
+      }
+      
+      set((state) => ({
+        chatMessages: [...state.chatMessages, friendMessage],
+        isFriendTyping: null,
+        unreadChatCount: state.chatDrawerOpen ? 0 : state.unreadChatCount + 1
+      }))
+    }, 1500 + Math.random() * 1000)
+  },
   openSelector: () => set({ screen: 'selector', validationError: null }),
   closeFlow: () => set({ screen: 'landing', validationError: null }),
   startCreateRoom: () => {
@@ -660,7 +778,21 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       voteStatusLogs: [],
       splitType: 'equal',
       customSplitShares: {},
-      appliedCoupon: null
+      appliedCoupon: null,
+      chatMessages: [
+        {
+          id: 'system-1',
+          senderId: 'system',
+          senderName: 'System',
+          avatarColor: 'bg-[#FF7A30]',
+          text: 'Food Squad lobby created! Start adding dishes to decide what to eat.',
+          timestamp: new Date().toISOString(),
+          isSystem: true
+        }
+      ],
+      chatDrawerOpen: false,
+      isFriendTyping: null,
+      unreadChatCount: 0
     })
   },
 
@@ -686,12 +818,47 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     setTimeout(() => {
       if (get().screen !== 'lobby') return
 
+      const friendId = `friend-${Date.now()}`
+      const newFriend = { id: friendId, name, isReady: false, avatarColor: color, isUser: false }
+      
+      const joinMessage: Message = {
+        id: `sys-${Date.now()}`,
+        senderId: 'system',
+        senderName: 'System',
+        avatarColor: color,
+        text: `${name} joined the food squad lobby! 👋`,
+        timestamp: new Date().toISOString(),
+        isSystem: true
+      }
+
       set((state) => ({
-        members: [
-          ...state.members,
-          { id: `friend-${Date.now()}`, name, isReady: false, avatarColor: color, isUser: false }
-        ]
+        members: [...state.members, newFriend],
+        chatMessages: [...state.chatMessages, joinMessage]
       }))
+
+      // Send a random welcome chat text from this friend after a slight delay
+      setTimeout(() => {
+        const welcomeTexts = [
+          "Hey everyone! 🍕 What are we ordering today?",
+          "Hey guys! Let's get something sweet too 🤤",
+          "Yo! Let's get food quickly, I have to go in 30 mins",
+          "What's up squads! Let's order some heavy main course 🍛",
+          "Hey squad! Veg or Non-veg today?"
+        ]
+        const welcomeMessage: Message = {
+          id: `msg-${Date.now()}`,
+          senderId: friendId,
+          senderName: name,
+          avatarColor: color,
+          text: welcomeTexts[Math.floor(Math.random() * welcomeTexts.length)],
+          timestamp: new Date().toISOString()
+        }
+        set((state) => ({
+          chatMessages: [...state.chatMessages, welcomeMessage],
+          unreadChatCount: state.chatDrawerOpen ? 0 : state.unreadChatCount + 1
+        }))
+      }, 800)
+
       get().simulateFriendJoin()
     }, 1000 + Math.random() * 600)
   },

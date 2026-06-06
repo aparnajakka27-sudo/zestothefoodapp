@@ -81,6 +81,9 @@ export const Navbar: React.FC = () => {
                     <p className="text-[#1E1E1E] text-xs font-bold truncate">{user?.name || guestName}</p>
                     <p className="text-[#6D6D6D] text-[10px] truncate">{user?.email || 'Quick Start Session'}</p>
                   </div>
+                  <button onClick={() => setScreen('profile')} className="w-full text-left px-2 py-1.5 text-xs text-[#1E1E1E] hover:bg-[#FAF7F2] rounded-lg font-semibold cursor-pointer transition-colors mb-1">
+                    My Profile
+                  </button>
                   {guestName && !user && (
                     <button onClick={() => setScreen('login')} className="w-full text-left px-2 py-1.5 text-xs text-[#FF7A30] hover:bg-[#FF7A30]/5 rounded-lg font-semibold cursor-pointer transition-colors mb-1">
                       Sign In to Save Data
@@ -149,6 +152,9 @@ export const Navbar: React.FC = () => {
                         <p className="text-[#6D6D6D] text-[10px] truncate leading-tight">{user?.email || 'Quick Start Session'}</p>
                       </div>
                     </div>
+                    <button onClick={() => { setIsOpen(false); setScreen('profile'); }} className="w-full text-center mt-1.5 py-1.5 text-xs text-[#1E1E1E] hover:bg-[#FAF7F2] rounded-xl font-bold border border-[#ECE6DD] cursor-pointer bg-white transition-colors">
+                      My Profile
+                    </button>
                     {guestName && !user && (
                       <button onClick={() => { setIsOpen(false); setScreen('login'); }} className="w-full text-center mt-1 py-1.5 text-xs text-[#FF7A30] hover:bg-[#FF7A30]/5 rounded-xl font-bold border border-[#FF7A30]/20 cursor-pointer bg-white transition-colors">
                         Sign In to Save Data

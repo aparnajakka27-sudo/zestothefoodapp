@@ -14,6 +14,7 @@ export type RoomScreen =
   | 'forgot_password'
   | 'welcome'
   | 'name_collection'
+  | 'profile'
 
 export interface Member {
   id: string
@@ -88,3 +89,15 @@ export interface HistoryDecision {
   cravings: string[]
   vibe: string[]
 }
+
+export interface Message {
+  id: string
+  senderId: string
+  senderName: string
+  avatarColor: string
+  text?: string
+  sticker?: string
+  timestamp: string
+  isSystem?: boolean
+}
+
