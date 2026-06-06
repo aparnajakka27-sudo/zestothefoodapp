@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <!-- Dark theme gradient (vibrant peach-orange-coral) -->
+    <linearGradient id="zGradDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA68A" />
+      <stop offset="50%" stop-color="#FF5A36" />
+      <stop offset="100%" stop-color="#D93D1B" />
+    </linearGradient>
+    <!-- Light theme gradient (slightly darker vibrant coral-red to stand out on light background) -->
+    <linearGradient id="zGradLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5A36" />
+      <stop offset="50%" stop-color="#E24422" />
+      <stop offset="100%" stop-color="#BE280A" />
+    </linearGradient>
+    <style>
+      .zesto-path {
+        fill: url(#zGradLight);
+      }
+      @media (prefers-color-scheme: dark) {
+        .zesto-path {
+          fill: url(#zGradDark);
+        }
+      }
+    </style>
+  </defs>
+  <path 
+    class="zesto-path" 
+    d="M25 45C25 32 37 20 52 20H85C97 20 102 29 93 37L55 71C49 76 53 82 61 82H87C99 82 105 94 95 100C88 104 80 104 73 104H35C23 104 18 95 27 87L65 53C71 48 67 42 59 42H43C33 42 25 37 25 45Z" 
+  />
+</svg>
