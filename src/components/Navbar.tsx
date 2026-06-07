@@ -14,7 +14,6 @@ export const Navbar: React.FC = () => {
   const setScreen = useRoomStore((state) => state.setScreen)
   const theme = useRoomStore((state) => state.theme)
   const toggleTheme = useRoomStore((state) => state.toggleTheme)
-  const hasCompletedSplit = useRoomStore((state) => state.hasCompletedSplit)
 
   const menuItems = [
     { name: 'How It Works', href: '#how-it-works' },
@@ -97,20 +96,9 @@ export const Navbar: React.FC = () => {
                     <p className="text-[#6D6D6D] text-[10px] truncate">{user?.email || 'Quick Start Session'}</p>
                   </div>
                   
-                  {hasCompletedSplit ? (
-                    <button onClick={() => setScreen('profile')} className="w-full text-left px-2 py-1.5 text-xs text-[#1E1E1E] hover:bg-[#FAF7F2] rounded-lg font-semibold cursor-pointer transition-colors mb-1">
-                      My Profile
-                    </button>
-                  ) : (
-                    <button 
-                      disabled 
-                      className="w-full text-left px-2 py-1.5 text-xs text-[#8B8B8B] bg-[#FAF7F2]/45 rounded-lg font-semibold cursor-not-allowed flex items-center justify-between mb-1"
-                      title="Complete your first split session to unlock profile history!"
-                    >
-                      <span>My Profile</span>
-                      <span className="text-[10px]">🔒</span>
-                    </button>
-                  )}
+                  <button onClick={() => setScreen('profile')} className="w-full text-left px-2 py-1.5 text-xs text-[#1E1E1E] hover:bg-[#FAF7F2] rounded-lg font-semibold cursor-pointer transition-colors mb-1">
+                    My Profile
+                  </button>
 
                   {guestName && !user && (
                     <button onClick={() => setScreen('login')} className="w-full text-left px-2 py-1.5 text-xs text-[#FF7A30] hover:bg-[#FF7A30]/5 rounded-lg font-semibold cursor-pointer transition-colors mb-1">
@@ -187,19 +175,9 @@ export const Navbar: React.FC = () => {
                       </div>
                     </div>
                     
-                    {hasCompletedSplit ? (
-                      <button onClick={() => { setIsOpen(false); setScreen('profile'); }} className="w-full text-center mt-1.5 py-1.5 text-xs text-[#1E1E1E] hover:bg-[#FAF7F2] rounded-xl font-bold border border-[#ECE6DD] cursor-pointer bg-white transition-colors">
-                        My Profile
-                      </button>
-                    ) : (
-                      <button 
-                        disabled 
-                        className="w-full text-center mt-1.5 py-1.5 text-xs text-[#8B8B8B] bg-[#FAF7F2]/45 rounded-xl font-bold border border-[#ECE6DD] cursor-not-allowed flex items-center justify-center gap-1.5"
-                        title="Complete your first split session to unlock!"
-                      >
-                        <span>My Profile 🔒</span>
-                      </button>
-                    )}
+                    <button onClick={() => { setIsOpen(false); setScreen('profile'); }} className="w-full text-center mt-1.5 py-1.5 text-xs text-[#1E1E1E] hover:bg-[#FAF7F2] rounded-xl font-bold border border-[#ECE6DD] cursor-pointer bg-white transition-colors">
+                      My Profile
+                    </button>
 
                     {guestName && !user && (
                       <button onClick={() => { setIsOpen(false); setScreen('login'); }} className="w-full text-center mt-1 py-1.5 text-xs text-[#FF7A30] hover:bg-[#FF7A30]/5 rounded-xl font-bold border border-[#FF7A30]/20 cursor-pointer bg-white transition-colors">

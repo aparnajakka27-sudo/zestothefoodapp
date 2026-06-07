@@ -236,7 +236,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   detectedAreaName: localStorage.getItem('zesto_area_name') || null,
   midpointAreaName: null,
   user: authService.getCurrentUser(),
-  authLoading: false,
+  authLoading: true,
   authError: null,
   guestName: localStorage.getItem('zesto_guest_name') || null,
   onboardingNextScreen: null,
@@ -1342,10 +1342,11 @@ onAuthStateChanged(auth, (firebaseUser) => {
     const isAuthScreen = ['landing', 'welcome', 'login', 'signup'].includes(store.screen)
     useRoomStore.setState({ 
       user,
-      screen: isAuthScreen ? 'create_room' : store.screen
+      screen: isAuthScreen ? 'create_room' : store.screen,
+      authLoading: false
     })
   } else {
-    useRoomStore.setState({ user: null })
+    useRoomStore.setState({ user: null, authLoading: false })
   }
 })
 

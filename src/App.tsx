@@ -14,7 +14,17 @@ import { DemoModal } from './components/DemoModal'
 
 function App() {
   const screen = useRoomStore((state) => state.screen)
+  const authLoading = useRoomStore((state) => state.authLoading)
   const { isDemoOpen, setIsDemoOpen, openSelector } = useRoomStore()
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] dark:bg-[#0F172A] flex flex-col justify-center items-center gap-3 select-none">
+        <div className="w-10 h-10 border-4 border-[#FF7A30] border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-black uppercase tracking-wider text-[#FF7A30]">Restoring Session...</span>
+      </div>
+    )
+  }
 
   // Initialize theme preference on mount
   useEffect(() => {
