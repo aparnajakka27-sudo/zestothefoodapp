@@ -599,8 +599,6 @@ export const useRoomStore = create<RoomState>((set, get) => ({
           roomCode: code,
           member: { id: 'user', name: 'You (Host)', isReady: false, avatarColor: 'bg-[#FF7E40]' }
         })
-      } else {
-        get().simulateFriendJoin()
       }
     } 
     // OPTION B: Help choose
@@ -697,11 +695,9 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     } else {
       set({
         members: [
-          { id: 'creator', name: 'Sam (Host)', isReady: true, avatarColor: 'bg-emerald-500', isUser: false },
           { id: 'user', name: uName, isReady: false, avatarColor: 'bg-[#FF7A30]', isUser: true },
         ]
       })
-      get().simulateFriendJoin()
     }
   },
 
@@ -794,11 +790,6 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       if (socket) {
         socket.emit('cast-group-dish-vote', { roomCode: state.roomCode, userId: 'user', dishId, vote })
       }
-    } else {
-      // Simulate other members voting shortly after
-      setTimeout(() => {
-        get().simulateFriendVotes()
-      }, 400)
     }
   },
 
@@ -926,10 +917,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       screen: 'voting_round'
     })
 
-    // Start simulating friend votes
-    setTimeout(() => {
-      get().simulateFriendVotes()
-    }, 1000)
+
   },
 
   resetRound: () => {
