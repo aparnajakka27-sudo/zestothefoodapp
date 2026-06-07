@@ -1193,7 +1193,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
           set({ user, screen: 'join_room', onboardingNextScreen: null })
         }
       } else {
-        set({ user, screen: 'landing' })
+        set({ user, screen: 'create_room' })
       }
     } catch (err: any) {
       set({ authError: err.message || 'Error creating account' })
@@ -1220,7 +1220,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
           set({ user, screen: 'join_room', onboardingNextScreen: null })
         }
       } else {
-        set({ user, screen: 'landing' })
+        set({ user, screen: 'create_room' })
       }
     } catch (err: any) {
       set({ authError: err.message || 'Error signing in' })
@@ -1259,7 +1259,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
           set({ user, screen: 'join_room', onboardingNextScreen: null })
         }
       } else {
-        set({ user, screen: 'landing' })
+        set({ user, screen: 'create_room' })
       }
     } catch (err: any) {
       set({ authError: err.message || 'Error signing in with Google' })
@@ -1338,7 +1338,12 @@ onAuthStateChanged(auth, (firebaseUser) => {
       username,
       avatarUrl
     }
-    useRoomStore.setState({ user })
+    const store = useRoomStore.getState()
+    const isAuthScreen = ['landing', 'welcome', 'login', 'signup'].includes(store.screen)
+    useRoomStore.setState({ 
+      user,
+      screen: isAuthScreen ? 'create_room' : store.screen
+    })
   } else {
     useRoomStore.setState({ user: null })
   }
