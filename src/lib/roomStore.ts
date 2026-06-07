@@ -1339,7 +1339,7 @@ onAuthStateChanged(auth, (firebaseUser) => {
       avatarUrl
     }
     const store = useRoomStore.getState()
-    const isAuthScreen = ['landing', 'welcome', 'login', 'signup'].includes(store.screen)
+    const isAuthScreen = ['welcome', 'login', 'signup'].includes(store.screen)
     useRoomStore.setState({ 
       user,
       screen: isAuthScreen ? 'create_room' : store.screen,
