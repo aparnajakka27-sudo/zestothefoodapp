@@ -242,19 +242,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   onboardingNextScreen: null,
   pendingRoomCode: null,
 
-  // Group Chat initial state
-  chatMessages: [
-    {
-      id: 'system-1',
-      senderId: 'system',
-      senderName: 'System',
-      avatarColor: 'bg-[#FF7A30]',
-      text: 'Food Squad lobby created! Start adding dishes to decide what to eat.',
-      timestamp: new Date().toISOString(),
-      isSystem: true,
-      seenStatus: 'read'
-    }
-  ],
+  chatMessages: [],
   chatDrawerOpen: false,
   isFriendTyping: null,
   unreadChatCount: 0,
@@ -352,11 +340,6 @@ export const useRoomStore = create<RoomState>((set, get) => ({
         chatMessages: state.chatMessages.map(m => m.id === newMessage.id ? { ...m, seenStatus: 'read' as const } : m)
       }))
     }, 1800)
-    
-    // Auto simulate friend responses after user message
-    setTimeout(() => {
-      get().simulateFriendChatActivity()
-    }, 1500 + Math.random() * 1000)
   },
 
   reactToMessage: (messageId, emoji) => {
@@ -986,18 +969,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       approvedDishIds: [],
       rejectedDishIds: [],
       finishedSelecting: {},
-      chatMessages: [
-        {
-          id: 'system-1',
-          senderId: 'system',
-          senderName: 'System',
-          avatarColor: 'bg-[#FF7A30]',
-          text: 'Food Squad lobby created! Start adding dishes to decide what to eat.',
-          timestamp: new Date().toISOString(),
-          isSystem: true,
-          seenStatus: 'read'
-        }
-      ],
+      chatMessages: [],
       chatDrawerOpen: false,
       isFriendTyping: null,
       unreadChatCount: 0,
@@ -1070,43 +1042,9 @@ export const useRoomStore = create<RoomState>((set, get) => ({
         longitude: baseLon + offsetLon
       }
       
-      const joinMessage: Message = {
-        id: `sys-${Date.now()}`,
-        senderId: 'system',
-        senderName: 'System',
-        avatarColor: color,
-        text: `${name} joined the food squad lobby! 👋`,
-        timestamp: new Date().toISOString(),
-        isSystem: true
-      }
-
       set((state) => ({
-        members: [...state.members, newFriend],
-        chatMessages: [...state.chatMessages, joinMessage]
+        members: [...state.members, newFriend]
       }))
-
-      // Send a random welcome chat text from this friend after a slight delay
-      setTimeout(() => {
-        const welcomeTexts = [
-          "Hey everyone! 🍕 What are we ordering today?",
-          "Hey guys! Let's get something sweet too 🤤",
-          "Yo! Let's get food quickly, I have to go in 30 mins",
-          "What's up squads! Let's order some heavy main course 🍛",
-          "Hey squad! Veg or Non-veg today?"
-        ]
-        const welcomeMessage: Message = {
-          id: `msg-${Date.now()}`,
-          senderId: friendId,
-          senderName: name,
-          avatarColor: color,
-          text: welcomeTexts[Math.floor(Math.random() * welcomeTexts.length)],
-          timestamp: new Date().toISOString()
-        }
-        set((state) => ({
-          chatMessages: [...state.chatMessages, welcomeMessage],
-          unreadChatCount: state.chatDrawerOpen ? 0 : state.unreadChatCount + 1
-        }))
-      }, 800)
 
       get().simulateFriendJoin()
     }, 1000 + Math.random() * 600)
