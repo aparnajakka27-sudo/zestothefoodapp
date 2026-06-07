@@ -6,12 +6,14 @@ import { authService } from './authService'
 import type { AuthUser } from './authService'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from './firebase'
+import { calculateMidpoint, reverseGeocodeNominatim } from '../services/location'
 
 interface RoomState {
   // Screen state
   screen: RoomScreen
   previousScreen: RoomScreen | null
   validationError: string | null
+  midpointAreaName: string | null
 
   // Room creation input details
   groupName: string
@@ -49,8 +51,25 @@ interface RoomState {
   chatDrawerOpen: boolean
   isFriendTyping: string | null
   unreadChatCount: number
-  sendChatMessage: (text?: string, sticker?: string) => void
+  pinnedMessage: Message | null
+  chatReplyMessage: Message | null
+  linkedDishDiscuss: Dish | null
+  sendChatMessage: (
+    text?: string, 
+    sticker?: string, 
+    gif?: string, 
+    mediaUrl?: string, 
+    voiceDuration?: number, 
+    voiceWaveform?: number[],
+    replyTo?: Message['replyTo'], 
+    linkedDish?: Message['linkedDish']
+  ) => void
   toggleChatDrawer: (val?: boolean) => void
+  reactToMessage: (messageId: string, emoji: string) => void
+  pinMessage: (messageId: string) => void
+  unpinMessage: () => void
+  setChatReplyMessage: (msg: Message | null) => void
+  setLinkedDishDiscuss: (dish: Dish | null) => void
   simulateFriendChatActivity: () => void
 
   // Lobby code & sharing
@@ -75,6 +94,13 @@ interface RoomState {
   splitType: 'equal' | 'custom'
   customSplitShares: Record<string, number> // memberId -> amount in Rupees
   appliedCoupon: string | null
+
+  // Theme & New States
+  theme: 'light' | 'dark'
+  hasCompletedSplit: boolean
+  approvedDishIds: string[]
+  rejectedDishIds: string[]
+  finishedSelecting: Record<string, boolean>
 
   // Actions
   setScreen: (screen: RoomScreen) => void
@@ -104,6 +130,10 @@ interface RoomState {
   applyCoupon: (code: string | null) => void
   confirmFoodSelections: () => void
   resetRound: () => void
+  toggleTheme: () => void
+  setFinishedSelecting: (memberId: string, isFinished: boolean) => void
+  proceedToBillSplit: () => void
+  setHasCompletedSplit: (val: boolean) => void
 
   // Simulation helpers
   simulateFriendJoin: () => void
@@ -115,9 +145,11 @@ interface RoomState {
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
   requestLocation: () => Promise<void>
+  isDemoOpen: boolean
+  setIsDemoOpen: (val: boolean) => void
 }
 
-const FRIEND_NAMES = ['Rahul', 'Sam', 'Arjun', 'Maya', 'Leo', 'Chloe', 'Neha', 'Kabir']
+const FRIEND_NAMES = ['Aman', 'Rohit', 'Karthik', 'Sam', 'Arjun', 'Maya', 'Neha', 'Leo']
 const FRIEND_COLORS = [
   'bg-rose-500',
   'bg-indigo-500',
@@ -172,27 +204,37 @@ const setupSocketListeners = (socket: any, set: any, get: any) => {
   })
 }
 
+const getSessionItem = (key: string, defaultValue: any) => {
+  try {
+    const val = sessionStorage.getItem(key)
+    return val ? JSON.parse(val) : defaultValue
+  } catch (e) {
+    return defaultValue
+  }
+}
+
 export const useRoomStore = create<RoomState>((set, get) => ({
-  screen: 'landing',
-  previousScreen: null,
+  screen: getSessionItem('zesto_screen', 'landing'),
+  previousScreen: getSessionItem('zesto_previousScreen', null),
   validationError: null,
 
-  groupName: '',
-  peopleCount: 4,
-  restaurantMode: 'already_chose',
+  groupName: getSessionItem('zesto_groupName', ''),
+  peopleCount: getSessionItem('zesto_peopleCount', 4),
+  restaurantMode: getSessionItem('zesto_restaurantMode', 'already_chose'),
 
   searchQuery: '',
-  selectedRestaurant: null,
+  selectedRestaurant: getSessionItem('zesto_selectedRestaurant', null),
 
-  city: 'Hyderabad',
-  cravings: [],
-  budgetVal: 800,
-  radiusVal: 5,
+  city: getSessionItem('zesto_city', 'Hyderabad'),
+  cravings: getSessionItem('zesto_cravings', []),
+  budgetVal: getSessionItem('zesto_budgetVal', 800),
+  radiusVal: getSessionItem('zesto_radiusVal', 5),
 
-  latitude: null,
-  longitude: null,
-  locationPermission: 'prompt',
-  detectedAreaName: null,
+  latitude: localStorage.getItem('zesto_latitude') ? parseFloat(localStorage.getItem('zesto_latitude')!) : null,
+  longitude: localStorage.getItem('zesto_longitude') ? parseFloat(localStorage.getItem('zesto_longitude')!) : null,
+  locationPermission: (localStorage.getItem('zesto_location_permission') as any) || 'prompt',
+  detectedAreaName: localStorage.getItem('zesto_area_name') || null,
+  midpointAreaName: null,
   user: authService.getCurrentUser(),
   authLoading: false,
   authError: null,
@@ -209,29 +251,41 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       avatarColor: 'bg-[#FF7A30]',
       text: 'Food Squad lobby created! Start adding dishes to decide what to eat.',
       timestamp: new Date().toISOString(),
-      isSystem: true
+      isSystem: true,
+      seenStatus: 'read'
     }
   ],
   chatDrawerOpen: false,
   isFriendTyping: null,
   unreadChatCount: 0,
+  pinnedMessage: null,
+  chatReplyMessage: null,
+  linkedDishDiscuss: null,
 
-  roomCode: '',
-  inviteLink: '',
-  members: [],
-  isMultiplayer: false,
+  roomCode: getSessionItem('zesto_roomCode', ''),
+  inviteLink: getSessionItem('zesto_inviteLink', ''),
+  members: getSessionItem('zesto_members', []),
+  isMultiplayer: getSessionItem('zesto_isMultiplayer', false),
 
-  restaurants: [],
-  showFoodOnboarding: true,
-  dishes: [],
-  selections: {},
+  restaurants: getSessionItem('zesto_restaurants', []),
+  showFoodOnboarding: getSessionItem('zesto_showFoodOnboarding', true),
+  dishes: getSessionItem('zesto_dishes', []),
+  selections: getSessionItem('zesto_selections', {}),
   
-  dishVotes: {},
-  voteStatusLogs: [],
+  dishVotes: getSessionItem('zesto_dishVotes', {}),
+  voteStatusLogs: getSessionItem('zesto_voteStatusLogs', []),
 
-  splitType: 'equal',
-  customSplitShares: {},
-  appliedCoupon: null,
+  splitType: getSessionItem('zesto_splitType', 'equal'),
+  customSplitShares: getSessionItem('zesto_customSplitShares', {}),
+  appliedCoupon: getSessionItem('zesto_appliedCoupon', null),
+
+  theme: (localStorage.getItem('zesto_theme') as 'light' | 'dark') || 'light',
+  hasCompletedSplit: getSessionItem('zesto_hasCompletedSplit', false),
+  approvedDishIds: getSessionItem('zesto_approvedDishIds', []),
+  rejectedDishIds: getSessionItem('zesto_rejectedDishIds', []),
+  finishedSelecting: getSessionItem('zesto_finishedSelecting', {}),
+  isDemoOpen: false,
+  setIsDemoOpen: (val) => set({ isDemoOpen: val }),
 
   setScreen: (screen) => set((state) => {
     const wasAuth = state.screen === 'login' || state.screen === 'signup' || state.screen === 'forgot_password'
@@ -254,7 +308,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     }
   }),
 
-  sendChatMessage: (text, sticker) => {
+  sendChatMessage: (text, sticker, gif, mediaUrl, voiceDuration, voiceWaveform, replyTo, linkedDish) => {
     const state = get()
     const currentUser = state.user
     const guest = state.guestName
@@ -269,18 +323,80 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       avatarColor: 'bg-[#FF7A30]',
       text,
       sticker,
-      timestamp: new Date().toISOString()
+      gif,
+      mediaUrl,
+      voiceDuration,
+      voiceWaveform,
+      replyTo,
+      linkedDish,
+      timestamp: new Date().toISOString(),
+      seenStatus: 'sent'
     }
     
     set((state) => ({
       chatMessages: [...state.chatMessages, newMessage],
-      unreadChatCount: 0
+      unreadChatCount: 0,
+      chatReplyMessage: null, // Clear active reply context on send
+      linkedDishDiscuss: null  // Clear active linked dish context
     }))
+    
+    // Simulate WhatsApp-style delivery tick updates
+    setTimeout(() => {
+      set((state) => ({
+        chatMessages: state.chatMessages.map(m => m.id === newMessage.id ? { ...m, seenStatus: 'delivered' as const } : m)
+      }))
+    }, 800)
+    
+    setTimeout(() => {
+      set((state) => ({
+        chatMessages: state.chatMessages.map(m => m.id === newMessage.id ? { ...m, seenStatus: 'read' as const } : m)
+      }))
+    }, 1800)
     
     // Auto simulate friend responses after user message
     setTimeout(() => {
       get().simulateFriendChatActivity()
-    }, 1500)
+    }, 1500 + Math.random() * 1000)
+  },
+
+  reactToMessage: (messageId, emoji) => {
+    set((state) => ({
+      chatMessages: state.chatMessages.map((msg) => {
+        if (msg.id === messageId) {
+          const currentReactions = msg.reactions || {}
+          return {
+            ...msg,
+            reactions: {
+              ...currentReactions,
+              user: emoji
+            }
+          }
+        }
+        return msg
+      })
+    }))
+  },
+
+  pinMessage: (messageId) => {
+    const msg = get().chatMessages.find(m => m.id === messageId)
+    if (msg) {
+      set((state) => ({
+        pinnedMessage: msg,
+        chatMessages: state.chatMessages.map(m => m.id === messageId ? { ...m, isPinned: true } : { ...m, isPinned: false })
+      }))
+    }
+  },
+
+  unpinMessage: () => {
+    set({ pinnedMessage: null })
+  },
+
+  setChatReplyMessage: (chatReplyMessage) => {
+    set({ chatReplyMessage })
+  },
+
+  setLinkedDishDiscuss: (linkedDishDiscuss) => {
+    set({ linkedDishDiscuss })
   },
 
   simulateFriendChatActivity: () => {
@@ -298,10 +414,10 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     setTimeout(() => {
       const phrases = [
         "Bro order this Chicken Biryani, I'm starving! 🤤",
-        "Must try the Butter Chicken from Mehfil!",
-        "Skip the soup guys, let's get main course.",
-        "Too expensive? I have a coupon SQUAD300!",
-        "Order more naans, 4 naans won't be enough.",
+        "Must try the Butter Naan guys, trust me! 🔥",
+        "Skip the soup, let's get main course.",
+        "Too expensive? Apply coupon SAVE100!",
+        "Order more cokes, 1 bottle won't be enough.",
         "Paneer is fine for me, but let's add some non-veg too.",
         "Is anyone veg? Let's check.",
         "I'm okay with anything, you guys decide!"
@@ -314,12 +430,51 @@ export const useRoomStore = create<RoomState>((set, get) => ({
         '🤤 "Looks tasty"',
         '🍽 "I’m hungry"',
         '😤 "Stop changing dishes"',
-        '😂 "Anything is fine"'
+        '😂 "Anything is fine"',
+        '🤦 "You always pick biryani"',
+        '😎 "Trust me bro"'
+      ]
+
+      const gifs = [
+        'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM2o0eDZpMzh3Ympyb2NrdnQ4OGdzbjlyeDY4eW9pYTd4Z29zYWltdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12uXi1GXGpCrcc/giphy.gif', // Pizza
+        'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3hxdW05NXRzYWgwa3phZzcycTVoZjB4NzA1aXhldHN3NHpldWZ2YSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ZgYAz3qrg1wti/giphy.gif'  // Burger
       ]
       
-      const sendSticker = Math.random() > 0.6
-      const randomText = sendSticker ? undefined : phrases[Math.floor(Math.random() * phrases.length)]
-      const randomSticker = sendSticker ? stickers[Math.floor(Math.random() * stickers.length)] : undefined
+      const roll = Math.random()
+      
+      let randomText: string | undefined = undefined
+      let randomSticker: string | undefined = undefined
+      let randomGif: string | undefined = undefined
+      let voiceDuration: number | undefined = undefined
+      let voiceWaveform: number[] | undefined = undefined
+      let replyTo: Message['replyTo'] = undefined
+
+      if (roll < 0.45) {
+        // Standard text
+        randomText = phrases[Math.floor(Math.random() * phrases.length)]
+        
+        // 30% chance to make it a reply to the user's last message
+        const lastUserMessage = state.chatMessages.filter(m => m.senderId === 'user').slice(-1)[0]
+        if (lastUserMessage && Math.random() > 0.7) {
+          replyTo = {
+            messageId: lastUserMessage.id,
+            senderName: lastUserMessage.senderName,
+            text: lastUserMessage.text,
+            sticker: lastUserMessage.sticker
+          }
+        }
+      } else if (roll < 0.7) {
+        // Sticker
+        randomSticker = stickers[Math.floor(Math.random() * stickers.length)]
+      } else if (roll < 0.85) {
+        // Simulated voice note
+        voiceDuration = Math.floor(5 + Math.random() * 15)
+        voiceWaveform = Array.from({ length: 15 }, () => Math.floor(10 + Math.random() * 80))
+      } else {
+        // GIF
+        randomGif = gifs[Math.floor(Math.random() * gifs.length)]
+        randomText = "Look at this! 🤤"
+      }
       
       const friendMessage: Message = {
         id: `msg-${Date.now()}`,
@@ -328,11 +483,37 @@ export const useRoomStore = create<RoomState>((set, get) => ({
         avatarColor: randomFriend.avatarColor,
         text: randomText,
         sticker: randomSticker,
+        gif: randomGif,
+        voiceDuration,
+        voiceWaveform,
+        replyTo,
         timestamp: new Date().toISOString()
       }
       
+      // Also, 40% chance the friend reacts to the last user message instead of or in addition to sending a message
+      const lastUserMsg = state.chatMessages.filter(m => m.senderId === 'user').slice(-1)[0]
+      let updatedMessages = [...state.chatMessages, friendMessage]
+      
+      if (lastUserMsg && Math.random() > 0.6) {
+        const emojis = ['🔥', '❤️', '😂', '👍', '😭']
+        const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)]
+        updatedMessages = updatedMessages.map((msg) => {
+          if (msg.id === lastUserMsg.id) {
+            const currentReactions = msg.reactions || {}
+            return {
+              ...msg,
+              reactions: {
+                ...currentReactions,
+                [randomFriend.id]: randomEmoji
+              }
+            }
+          }
+          return msg
+        })
+      }
+      
       set((state) => ({
-        chatMessages: [...state.chatMessages, friendMessage],
+        chatMessages: updatedMessages,
         isFriendTyping: null,
         unreadChatCount: state.chatDrawerOpen ? 0 : state.unreadChatCount + 1
       }))
@@ -644,6 +825,8 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     const uniqueSelectedDishes = Array.from(new Set(allSelectedDishes))
     
     const approvedDishIds: string[] = []
+    const rejectedDishIds: string[] = []
+    
     uniqueSelectedDishes.forEach(dishId => {
       const votes = state.dishVotes[dishId] || {}
       let continueCount = 0
@@ -657,13 +840,25 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       
       if (continueCount >= skipCount) {
         approvedDishIds.push(dishId)
+      } else {
+        rejectedDishIds.push(dishId)
       }
     })
 
-    // Update selections to only contain approved dishes
+    set({
+      approvedDishIds,
+      rejectedDishIds,
+      screen: 'final_dishes'
+    })
+  },
+
+  proceedToBillSplit: () => {
+    const state = get()
+    
+    // Filter selections to only approved dishes
     const updatedSelections: Record<string, string[]> = {}
     Object.entries(state.selections).forEach(([memberId, dishIds]) => {
-      updatedSelections[memberId] = dishIds.filter(id => approvedDishIds.includes(id))
+      updatedSelections[memberId] = dishIds.filter(id => state.approvedDishIds.includes(id))
     })
 
     // Setup initial custom splitting amounts equally
@@ -693,6 +888,28 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     })
   },
 
+  toggleTheme: () => {
+    const nextTheme = get().theme === 'light' ? 'dark' : 'light'
+    localStorage.setItem('zesto_theme', nextTheme)
+    if (nextTheme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+    set({ theme: nextTheme })
+  },
+
+  setFinishedSelecting: (memberId, isFinished) => {
+    set((state) => ({
+      finishedSelecting: {
+        ...state.finishedSelecting,
+        [memberId]: isFinished
+      }
+    }))
+  },
+
+  setHasCompletedSplit: (hasCompletedSplit) => set({ hasCompletedSplit }),
+
   setSplitType: (splitType) => set({ splitType }),
 
   updateCustomSplitShare: (memberId, amount) => {
@@ -707,33 +924,16 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   applyCoupon: (appliedCoupon) => set({ appliedCoupon }),
 
   confirmFoodSelections: () => {
-    // Generate simulated food selections for other friends who joined the lobby
     const state = get()
     const updatedSelections = { ...state.selections }
     
-    state.members.forEach(member => {
-      if (member.id !== 'user') {
-        const count = Math.floor(1 + Math.random() * 2.5)
-        const chosen: string[] = []
-        for (let i = 0; i < count; i++) {
-          const randomDish = state.dishes[Math.floor(Math.random() * state.dishes.length)]
-          if (randomDish && !chosen.includes(randomDish.id)) {
-            chosen.push(randomDish.id)
-          }
-        }
-        updatedSelections[member.id] = chosen
-      }
-    })
-
-    // Auto-approve user's own picks initially in dishVotes
+    // Set up empty initial dishVotes so all combined dishes must be swiped by the user
     const initialDishVotes: Record<string, Record<string, 'continue' | 'skip'>> = {}
     const allSelectedDishes = Object.values(updatedSelections).flat()
     const uniqueSelectedDishes = Array.from(new Set(allSelectedDishes))
     
     uniqueSelectedDishes.forEach(dishId => {
-      initialDishVotes[dishId] = {
-        user: state.selections['user']?.includes(dishId) ? 'continue' : 'continue'
-      }
+      initialDishVotes[dishId] = {}
     })
 
     set({
@@ -750,6 +950,9 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   },
 
   resetRound: () => {
+    try {
+      sessionStorage.clear()
+    } catch (e) {}
     set({
       screen: 'landing',
       validationError: null,
@@ -779,6 +982,10 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       splitType: 'equal',
       customSplitShares: {},
       appliedCoupon: null,
+      hasCompletedSplit: false,
+      approvedDishIds: [],
+      rejectedDishIds: [],
+      finishedSelecting: {},
       chatMessages: [
         {
           id: 'system-1',
@@ -787,12 +994,16 @@ export const useRoomStore = create<RoomState>((set, get) => ({
           avatarColor: 'bg-[#FF7A30]',
           text: 'Food Squad lobby created! Start adding dishes to decide what to eat.',
           timestamp: new Date().toISOString(),
-          isSystem: true
+          isSystem: true,
+          seenStatus: 'read'
         }
       ],
       chatDrawerOpen: false,
       isFriendTyping: null,
-      unreadChatCount: 0
+      unreadChatCount: 0,
+      pinnedMessage: null,
+      chatReplyMessage: null,
+      linkedDishDiscuss: null
     })
   },
 
@@ -801,6 +1012,29 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     const totalTarget = get().peopleCount
     
     if (currentMembers.length >= totalTarget) {
+      // Calculate geographic midpoint of coordinates for all squad members
+      const finalCoords = get().members.map((m) => {
+        if (m.isUser) return { latitude: get().latitude || 17.4483, longitude: get().longitude || 78.3741 }
+        return { latitude: (m as any).latitude || 17.4483, longitude: (m as any).longitude || 78.3741 }
+      })
+      const finalMid = calculateMidpoint(finalCoords)
+      if (finalMid) {
+        reverseGeocodeNominatim(finalMid.latitude, finalMid.longitude).then(async (area) => {
+          set({ midpointAreaName: area })
+          // Fetch restaurants near the geographic midpoint
+          const results = await fetchRestaurants(
+            finalMid.latitude,
+            finalMid.longitude,
+            get().radiusVal,
+            get().cravings,
+            get().budgetVal <= 500 ? '₹' : get().budgetVal <= 1500 ? '₹₹' : '₹₹₹',
+            get().city
+          )
+          const filteredResults = results.filter((r) => r.rating >= 4.0)
+          set({ restaurants: filteredResults.length > 0 ? filteredResults : results })
+        })
+      }
+
       setTimeout(() => {
         get().simulateFriendReady()
       }, 1000)
@@ -819,7 +1053,22 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       if (get().screen !== 'lobby') return
 
       const friendId = `friend-${Date.now()}`
-      const newFriend = { id: friendId, name, isReady: false, avatarColor: color, isUser: false }
+      
+      // Assign mock coordinates around the host coordinate
+      const baseLat = get().latitude || 17.4483
+      const baseLon = get().longitude || 78.3741
+      const offsetLat = (Math.random() - 0.5) * 0.02
+      const offsetLon = (Math.random() - 0.5) * 0.02
+
+      const newFriend = { 
+        id: friendId, 
+        name, 
+        isReady: false, 
+        avatarColor: color, 
+        isUser: false,
+        latitude: baseLat + offsetLat,
+        longitude: baseLon + offsetLon
+      }
       
       const joinMessage: Message = {
         id: `sys-${Date.now()}`,
@@ -913,7 +1162,10 @@ export const useRoomStore = create<RoomState>((set, get) => ({
         const newDishVotes = { ...state.dishVotes, [dishId]: updatedVotes }
         
         const dishName = state.dishes.find(d => d.id === dishId)?.name || 'Dish'
-        const newLogs = [...state.voteStatusLogs, `${friend.name} voted to ${randomVote === 'continue' ? 'Keep' : 'Skip'} "${dishName}"`]
+        const logText = randomVote === 'continue'
+          ? `${friend.name} approved ${dishName} 🔥`
+          : `${friend.name} skipped ${dishName}`
+        const newLogs = [...state.voteStatusLogs, logText]
         
         return { dishVotes: newDishVotes, voteStatusLogs: newLogs }
       })
@@ -1043,23 +1295,30 @@ export const useRoomStore = create<RoomState>((set, get) => ({
             locationPermission: 'granted',
             detectedAreaName: 'Detecting Area Name...'
           })
+          localStorage.setItem('zesto_latitude', String(lat))
+          localStorage.setItem('zesto_longitude', String(lon))
+          localStorage.setItem('zesto_location_permission', 'granted')
           
           try {
             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
             const data = await response.json()
             const area = data.address.suburb || data.address.neighbourhood || data.address.village || data.address.town || data.address.city || 'My Coordinates'
             set({ detectedAreaName: area })
+            localStorage.setItem('zesto_area_name', area)
           } catch (e) {
             set({ detectedAreaName: 'Nearby Location' })
+            localStorage.setItem('zesto_area_name', 'Nearby Location')
           }
         },
         (error) => {
           console.error(error)
           set({ locationPermission: 'denied', validationError: 'Allow location access to find restaurants near you.' })
+          localStorage.setItem('zesto_location_permission', 'denied')
         }
       )
     } else {
       set({ locationPermission: 'denied', validationError: 'Geolocation is not supported by your browser.' })
+      localStorage.setItem('zesto_location_permission', 'denied')
     }
   }
 }))
@@ -1070,7 +1329,7 @@ onAuthStateChanged(auth, (firebaseUser) => {
     const email = firebaseUser.email || ''
     const name = firebaseUser.displayName || email.split('@')[0] || 'User'
     const username = email.split('@')[0] || ''
-    const avatarUrl = firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=FF7A30&color=fff&bold=true&size=128`
+    const avatarUrl = firebaseUser.photoURL || `https://api.dicebear.com/7.x/lorelei/svg?seed=${encodeURIComponent(name)}`
 
     const user: AuthUser = {
       uid: firebaseUser.uid,
@@ -1084,3 +1343,38 @@ onAuthStateChanged(auth, (firebaseUser) => {
     useRoomStore.setState({ user: null })
   }
 })
+
+// Subscribe to store updates to persist screen and room details across tab refreshes
+if (typeof window !== 'undefined') {
+  useRoomStore.subscribe((state) => {
+    try {
+      sessionStorage.setItem('zesto_screen', JSON.stringify(state.screen))
+      sessionStorage.setItem('zesto_previousScreen', JSON.stringify(state.previousScreen))
+      sessionStorage.setItem('zesto_groupName', JSON.stringify(state.groupName))
+      sessionStorage.setItem('zesto_peopleCount', JSON.stringify(state.peopleCount))
+      sessionStorage.setItem('zesto_restaurantMode', JSON.stringify(state.restaurantMode))
+      sessionStorage.setItem('zesto_selectedRestaurant', JSON.stringify(state.selectedRestaurant))
+      sessionStorage.setItem('zesto_city', JSON.stringify(state.city))
+      sessionStorage.setItem('zesto_cravings', JSON.stringify(state.cravings))
+      sessionStorage.setItem('zesto_budgetVal', JSON.stringify(state.budgetVal))
+      sessionStorage.setItem('zesto_radiusVal', JSON.stringify(state.radiusVal))
+      sessionStorage.setItem('zesto_roomCode', JSON.stringify(state.roomCode))
+      sessionStorage.setItem('zesto_inviteLink', JSON.stringify(state.inviteLink))
+      sessionStorage.setItem('zesto_members', JSON.stringify(state.members))
+      sessionStorage.setItem('zesto_isMultiplayer', JSON.stringify(state.isMultiplayer))
+      sessionStorage.setItem('zesto_restaurants', JSON.stringify(state.restaurants))
+      sessionStorage.setItem('zesto_showFoodOnboarding', JSON.stringify(state.showFoodOnboarding))
+      sessionStorage.setItem('zesto_dishes', JSON.stringify(state.dishes))
+      sessionStorage.setItem('zesto_selections', JSON.stringify(state.selections))
+      sessionStorage.setItem('zesto_dishVotes', JSON.stringify(state.dishVotes))
+      sessionStorage.setItem('zesto_voteStatusLogs', JSON.stringify(state.voteStatusLogs))
+      sessionStorage.setItem('zesto_splitType', JSON.stringify(state.splitType))
+      sessionStorage.setItem('zesto_customSplitShares', JSON.stringify(state.customSplitShares))
+      sessionStorage.setItem('zesto_appliedCoupon', JSON.stringify(state.appliedCoupon))
+      sessionStorage.setItem('zesto_hasCompletedSplit', JSON.stringify(state.hasCompletedSplit))
+      sessionStorage.setItem('zesto_approvedDishIds', JSON.stringify(state.approvedDishIds))
+      sessionStorage.setItem('zesto_rejectedDishIds', JSON.stringify(state.rejectedDishIds))
+      sessionStorage.setItem('zesto_finishedSelecting', JSON.stringify(state.finishedSelecting))
+    } catch (e) {}
+  })
+}

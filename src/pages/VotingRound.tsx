@@ -59,7 +59,7 @@ const SwipeCard: React.FC<{
             exit={{ opacity: 0 }}
             className="absolute top-8 right-8 border-4 border-emerald-500 text-emerald-500 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-xl rotate-12 z-20"
           >
-            Let's order! 🔥
+            Let's order this 🔥
           </motion.div>
         )}
         {swipeDirection === 'left' && (
@@ -69,7 +69,7 @@ const SwipeCard: React.FC<{
             exit={{ opacity: 0 }}
             className="absolute top-8 left-8 border-4 border-rose-500 text-rose-500 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-xl -rotate-12 z-20"
           >
-            Skip ❌
+            Skip this
           </motion.div>
         )}
       </AnimatePresence>
@@ -95,7 +95,12 @@ const SwipeCard: React.FC<{
           </div>
           
           <p className="text-[10.5px] text-[#6D6D6D] mt-1.5 font-medium leading-relaxed">
-            Chosen by: <span className="text-[#FF7A30] font-bold">{choosers.join(', ')}</span>
+            Selected by: <span className="text-[#FF7A30] font-bold">
+              {choosers.length === 1 
+                ? choosers[0] 
+                : `${choosers[0]} + ${choosers.length - 1} friend${choosers.length - 1 > 1 ? 's' : ''}`
+              }
+            </span>
           </p>
           
           <p className="text-[10px] text-[#8B8B8B] font-semibold mt-1 leading-normal italic">
@@ -109,52 +114,17 @@ const SwipeCard: React.FC<{
             onClick={() => handleBtnClick('skip')}
             className="py-2.5 rounded-full border border-[#ECE6DD] bg-[#FAF7F2] hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 text-[#6D6D6D] text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
           >
-            <X className="w-4 h-4 text-rose-500" /> Skip Card
+            <X className="w-4 h-4 text-rose-500" /> Skip dish
           </button>
           <button
             onClick={() => handleBtnClick('continue')}
             className="py-2.5 rounded-full border border-none bg-gradient-to-r from-[#FF7A30] to-[#FF8C42] text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
           >
-            <Flame className="w-4 h-4 text-white" /> Add Dish
+            <Flame className="w-4 h-4 text-white" /> Approve dish
           </button>
         </div>
       </div>
     </motion.div>
-  )
-}
-
-// Confetti Particle System for results screen
-const ConfettiRain: React.FC = () => {
-  const pieces = React.useMemo(() => {
-    const colors = ['bg-[#FF7A30]', 'bg-[#FF8C42]', 'bg-amber-400', 'bg-emerald-400', 'bg-indigo-400', 'bg-rose-400']
-    return Array.from({ length: 40 }).map((_, i) => {
-      const randX = Math.random() * 100 // left%
-      const randDelay = Math.random() * 2 // seconds delay
-      const randDuration = 1.5 + Math.random() * 1.5 // seconds duration
-      const randSize = 6 + Math.floor(Math.random() * 6) // px width/height
-      const colorClass = colors[Math.floor(Math.random() * colors.length)]
-      return { id: i, randX, randDelay, randDuration, randSize, colorClass }
-    })
-  }, [])
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-30">
-      {pieces.map((piece) => (
-        <motion.div
-          key={piece.id}
-          initial={{ y: -20, x: `${piece.randX}%`, rotate: 0, opacity: 1 }}
-          animate={{ y: 550, rotate: 360, opacity: 0 }}
-          transition={{
-            duration: piece.randDuration,
-            delay: piece.randDelay,
-            ease: 'easeOut',
-            repeat: Infinity
-          }}
-          style={{ width: piece.randSize, height: piece.randSize }}
-          className={`absolute rounded-sm ${piece.colorClass}`}
-        />
-      ))}
-    </div>
   )
 }
 
@@ -258,15 +228,16 @@ export const VotingRound: React.FC = () => {
       {/* Swipe ballot Header */}
       <div className="z-10 space-y-1.5">
         <span className="text-[#FF7A30] text-[10px] font-bold tracking-wider block uppercase">
-          Squad Swiper ballot
+          Step 4 of 5 • Squad Voting
         </span>
         <h1 className="text-2xl font-black text-[#1E1E1E] tracking-tight leading-none">
-          {unvotedDishes.length > 0 ? 'Swipe with your squad 🍽' : 'Consensus results 🔥'}
+          Vote with your squad 🍽
         </h1>
-        <p className="text-[11px] text-[#6D6D6D] font-semibold">
-          {unvotedDishes.length > 0 
-            ? 'Swipe dishes left to Skip or right to Add. Decide together.' 
-            : 'Here is what the squad approved for order finalization.'}
+        <p className="text-[11px] text-[#6D6D6D] font-semibold leading-relaxed">
+          You and your friends selected these dishes. Vote to finalize them.
+        </p>
+        <p className="text-[9.5px] text-[#8B8B8B] font-medium leading-normal italic">
+          Approve dishes you want. Skip dishes you don't want. Higher voted dishes get finalized.
         </p>
       </div>
 
@@ -310,7 +281,7 @@ export const VotingRound: React.FC = () => {
         </div>
       )}
 
-      {/* Center Action Zone: Swiper Deck OR Consensus results */}
+      {/* Center Action Zone: Swiper Deck OR Waiting/Success Area */}
       <div className="z-10 relative flex justify-center items-center">
         {selectedDishes.length === 0 ? (
           <div className="bg-white border border-[#ECE6DD] p-10 rounded-[28px] w-full text-center text-[#8B8B8B] text-xs font-semibold shadow-sm">
@@ -318,7 +289,7 @@ export const VotingRound: React.FC = () => {
           </div>
         ) : unvotedDishes.length > 0 ? (
           /* ACTIVE TINDER DECK */
-          <div className="w-full max-w-sm h-[380px] relative">
+          <div className="w-full max-w-sm h-[430px] relative">
             {unvotedDishes.slice(0, 3).reverse().map((dish, idx, arr) => {
               // Create offset stack layers
               const stackIndex = arr.length - 1 - idx
@@ -344,61 +315,39 @@ export const VotingRound: React.FC = () => {
             })}
           </div>
         ) : (
-          /* CONSENSUS RESULTS VIEW WITH CONFETTI */
+          /* WAITING FOR OTHERS TO FINISH OR SUCCESS READY */
           <motion.div 
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-full bg-white border border-[#ECE6DD] p-6 rounded-[28px] shadow-sm text-left relative overflow-hidden"
+            className="w-full bg-white border border-[#ECE6DD] p-8 rounded-[28px] shadow-sm text-center relative overflow-hidden"
           >
-            {/* Play confetti rain overlay */}
-            <ConfettiRain />
-
-            {/* Approved list */}
-            <div className="space-y-4 relative z-10">
-              <span className="text-[10px] font-black text-[#6D6D6D] uppercase tracking-wider border-b border-[#ECE6DD] pb-1.5 block">
-                🔥 Squad Approved Orders ({approvedDishes.length})
-              </span>
-              
-              {approvedDishes.length === 0 ? (
-                <div className="p-4 text-[#8B8B8B] text-xs font-semibold text-center bg-[#FAF7F2] rounded-2xl border border-dashed border-[#ECE6DD]">
-                  No dishes got majority approval.
+            {progressPercent < 100 ? (
+              <div className="space-y-4 py-6">
+                <div className="flex justify-center">
+                  <div className="w-12 h-12 rounded-full border-4 border-[#FF7A30]/30 border-t-[#FF7A30] animate-spin" />
                 </div>
-              ) : (
-                <div className="flex flex-col gap-2.5 max-h-[180px] overflow-y-auto pr-1">
-                  {approvedDishes.map(d => {
-                    const { continueCount } = getVoteCounts(d.id)
-                    return (
-                      <div key={d.id} className="flex justify-between items-center p-3 bg-emerald-50/20 border border-emerald-100 rounded-2xl">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <CheckCircle className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
-                          <span className="text-xs font-bold text-[#1E1E1E] truncate">{d.name}</span>
-                        </div>
-                        <span className="text-[10px] font-black text-[#4CAF50] bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 shrink-0">
-                          {continueCount} Votes
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Rejected list */}
-              {rejectedDishes.length > 0 && (
-                <div className="space-y-2.5 pt-2">
-                  <span className="text-[10px] font-black text-[#6D6D6D] uppercase tracking-wider pb-1 block">
-                    ❌ Skipped / Rejected ({rejectedDishes.length})
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {rejectedDishes.map(d => (
-                      <div key={d.id} className="px-3 py-1.5 bg-rose-50/25 border border-rose-100/50 rounded-xl text-[10px] font-bold text-rose-500 flex items-center gap-1 opacity-75">
-                        <X className="w-3.5 h-3.5 text-rose-500 stroke-[2.5]" />
-                        <span className="truncate max-w-[120px]">{d.name}</span>
-                      </div>
-                    ))}
+                <h3 className="text-sm font-black text-[#1E1E1E] uppercase tracking-wider">
+                  Waiting for squad to finish voting...
+                </h3>
+                <p className="text-[10.5px] text-[#6D6D6D] leading-relaxed max-w-xs mx-auto">
+                  You've swiped all the dishes! Other squad members are still voting on the group choices in real time.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4 py-6">
+                <div className="flex justify-center">
+                  <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500 text-xl font-bold animate-bounce">
+                    🎉
                   </div>
                 </div>
-              )}
-            </div>
+                <h3 className="text-sm font-black text-[#1E1E1E] uppercase tracking-wider">
+                  All squad votes cast!
+                </h3>
+                <p className="text-[10.5px] text-[#6D6D6D] leading-relaxed max-w-xs mx-auto">
+                  Consensus has been reached. Proceed to view the final squad dishes and start splitting the bill.
+                </p>
+              </div>
+            )}
           </motion.div>
         )}
       </div>
@@ -413,48 +362,45 @@ export const VotingRound: React.FC = () => {
       )}
 
       {/* Real-time status logs activity feed */}
-      {unvotedDishes.length > 0 && (
-        <div className="z-10 bg-[#FFFFFF] border border-[#ECE6DD] p-4 rounded-2xl flex flex-col gap-2 shadow-sm">
-          <span className="text-[9px] font-bold text-[#8B8B8B] tracking-wider flex items-center gap-1 border-b border-[#ECE6DD] pb-1">
-            <Users className="w-3.5 h-3.5 text-[#FF7A30]" /> Live ballot activity feed
-          </span>
-          <div className="flex flex-col gap-1.5 max-h-[85px] overflow-y-auto pr-1 select-none font-mono text-[9px] font-medium text-[#6D6D6D]">
-            <AnimatePresence>
-              {voteStatusLogs.slice(-4).map((log, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-1 uppercase tracking-wider"
-                >
-                  <span className="text-[#FF7A30] shrink-0">&gt;</span>
-                  <span>{log}</span>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+      <div className="z-10 bg-[#FFFFFF] border border-[#ECE6DD] p-4 rounded-2xl flex flex-col gap-2 shadow-sm">
+        <span className="text-[9px] font-bold text-[#8B8B8B] tracking-wider flex items-center gap-1 border-b border-[#ECE6DD] pb-1">
+          <Users className="w-3.5 h-3.5 text-[#FF7A30]" /> Live ballot activity feed
+        </span>
+        <div className="flex flex-col gap-1.5 max-h-[85px] overflow-y-auto pr-1 select-none font-mono text-[9px] font-medium text-[#6D6D6D]">
+          <AnimatePresence>
+            {voteStatusLogs.slice(-4).map((log, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center gap-1 uppercase tracking-wider"
+              >
+                <span className="text-[#FF7A30] shrink-0">&gt;</span>
+                <span>{log}</span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
-      )}
+      </div>
 
       {/* Continue CTA */}
       <div className="z-10">
-        <button
-          onClick={confirmVotingRound}
-          className={`w-full py-3.5 border-none font-bold tracking-wider text-[11px] uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 font-sans text-white ${
-            unvotedDishes.length === 0
-              ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/10' 
-              : 'bg-gradient-to-r from-[#FF7A30] to-[#FF8C42] hover:scale-[1.01] active:scale-[0.99]'
-          }`}
-        >
-          {unvotedDishes.length === 0 ? (
-            <>
-              <CheckCircle className="w-4.5 h-4.5 text-white" /> Confirm & Split Bill
-            </>
-          ) : (
-            'Continue to bill split anyway'
-          )}
-        </button>
+        {progressPercent < 100 ? (
+          <button
+            onClick={confirmVotingRound}
+            className="w-full py-3.5 border-none font-bold tracking-wider text-[11px] uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 font-sans text-white bg-gradient-to-r from-[#FF7A30] to-[#FF8C42] hover:scale-[1.01] active:scale-[0.99]"
+          >
+            Skip wait & view results anyway
+          </button>
+        ) : (
+          <button
+            onClick={confirmVotingRound}
+            className="w-full py-3.5 border-none font-bold tracking-wider text-[11px] uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 font-sans text-white bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/10 hover:scale-[1.01] active:scale-[0.99]"
+          >
+            <CheckCircle className="w-4.5 h-4.5 text-white" /> View Consensus Results
+          </button>
+        )}
       </div>
 
     </motion.div>

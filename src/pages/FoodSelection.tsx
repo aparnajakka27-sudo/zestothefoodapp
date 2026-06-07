@@ -13,16 +13,131 @@ export const FoodSelection: React.FC = () => {
     resetRound,
     cravings,
     showFoodOnboarding,
-    setShowFoodOnboarding
+    setShowFoodOnboarding,
+    finishedSelecting,
+    setFinishedSelecting,
+    members
   } = useRoomStore()
 
   const [activeCategory, setActiveCategory] = useState<'All' | 'Starters' | 'Main Course' | 'Rice & Biryani' | 'Drinks' | 'Desserts'>('All')
 
   const userSelections = selections['user'] || []
+  const isUserFinished = finishedSelecting['user'] || false
+  const allSquadFinished = members.every(m => finishedSelecting[m.id] || false)
+
+  const handleConfirmChoices = () => {
+    if (!isUserFinished) {
+      setFinishedSelecting('user', true)
+    } else if (allSquadFinished) {
+      confirmFoodSelections()
+    }
+  }
 
   const handleDishToggle = (dishId: string) => {
     toggleDishSelection('user', dishId)
   }
+
+  React.useEffect(() => {
+    if (showFoodOnboarding) return
+
+    // Initialize finished selecting for everyone if not set
+    members.forEach(m => {
+      if (m.id !== 'user' && finishedSelecting[m.id] === undefined) {
+        setFinishedSelecting(m.id, false)
+      }
+    })
+
+    const simulationTasks: Array<{
+      time: number
+      action: () => void
+    }> = []
+
+    const findDishId = (keywords: string[], fallbackIndex: number) => {
+      const match = dishes.find(d => 
+        keywords.some(keyword => d.name.toLowerCase().includes(keyword))
+      )
+      return match ? match.id : (dishes[fallbackIndex]?.id || dishes[0]?.id)
+    }
+
+    members.forEach(member => {
+      if (member.id === 'user') return
+
+      const name = member.name.toLowerCase()
+      if (name.includes('aman')) {
+        simulationTasks.push({
+          time: 2500,
+          action: () => {
+            const dId = findDishId(['biryani', 'rice'], 0)
+            if (dId) toggleDishSelection(member.id, dId)
+          }
+        })
+        simulationTasks.push({
+          time: 5500,
+          action: () => {
+            const dId = findDishId(['naan', 'roti', 'butter chicken', 'curry'], 1)
+            if (dId) toggleDishSelection(member.id, dId)
+            setFinishedSelecting(member.id, true)
+          }
+        })
+      } else if (name.includes('rohit')) {
+        simulationTasks.push({
+          time: 3500,
+          action: () => {
+            const dId = findDishId(['fried rice', 'rice', 'noodles'], 2)
+            if (dId) toggleDishSelection(member.id, dId)
+          }
+        })
+        simulationTasks.push({
+          time: 7000,
+          action: () => {
+            const dId = findDishId(['65', 'wings', 'tikka', 'kebab'], 3)
+            if (dId) toggleDishSelection(member.id, dId)
+            setFinishedSelecting(member.id, true)
+          }
+        })
+      } else if (name.includes('karthik')) {
+        simulationTasks.push({
+          time: 4500,
+          action: () => {
+            const dId = findDishId(['coffee', 'coke', 'drink', 'pepsi', 'soda'], 4)
+            if (dId) toggleDishSelection(member.id, dId)
+          }
+        })
+        simulationTasks.push({
+          time: 8500,
+          action: () => {
+            const dId = findDishId(['biryani', 'butter chicken', 'paneer'], 0)
+            if (dId) toggleDishSelection(member.id, dId)
+            setFinishedSelecting(member.id, true)
+          }
+        })
+      } else {
+        simulationTasks.push({
+          time: 2000 + Math.random() * 2000,
+          action: () => {
+            const dId = dishes[Math.floor(Math.random() * dishes.length)]?.id
+            if (dId) toggleDishSelection(member.id, dId)
+          }
+        })
+        simulationTasks.push({
+          time: 6000 + Math.random() * 2000,
+          action: () => {
+            const dId = dishes[Math.floor(Math.random() * dishes.length)]?.id
+            if (dId) toggleDishSelection(member.id, dId)
+            setFinishedSelecting(member.id, true)
+          }
+        })
+      }
+    })
+
+    const timeoutIds = simulationTasks.map(task => 
+      setTimeout(task.action, task.time)
+    )
+
+    return () => {
+      timeoutIds.forEach(id => clearTimeout(id))
+    }
+  }, [showFoodOnboarding, members, dishes])
 
   if (!selectedRestaurant) return null
 
@@ -231,11 +346,12 @@ export const FoodSelection: React.FC = () => {
 
                     <button
                       onClick={() => handleDishToggle(dish.id)}
+                      disabled={isUserFinished}
                       className={`px-3.5 py-1 rounded-lg border text-[9px] font-bold tracking-wide transition-all cursor-pointer flex items-center gap-1 ${
                         isSelected
                           ? 'bg-[#FF7A30] border-transparent text-white shadow-sm'
                           : 'bg-[#F4EFE8] border-[#ECE6DD] hover:bg-[#ECE6DD] text-[#6D6D6D] hover:text-[#1E1E1E]'
-                      }`}
+                      } ${isUserFinished ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       {isSelected ? (
                         <>
@@ -256,22 +372,72 @@ export const FoodSelection: React.FC = () => {
 
       {/* Tally Ticker and Submit */}
       <div className="flex flex-col gap-3.5 z-10">
+        {/* Squad Progress panel */}
+        <div className="bg-[#FFFFFF] border border-[#ECE6DD] p-4 rounded-xl flex flex-col gap-2.5 shadow-sm text-left">
+          <span className="text-[9.5px] font-bold text-[#FF7A30] tracking-wider uppercase">Squad selection progress</span>
+          <div className="flex flex-col gap-1.5">
+            {members.map(member => {
+              const isUser = member.id === 'user'
+              const isFinished = isUser ? isUserFinished : (finishedSelecting[member.id] || false)
+              const count = selections[member.id]?.length || 0
+              return (
+                <div key={member.id} className="flex items-center justify-between p-2 bg-[#FAF7F2] border border-[#ECE6DD] rounded-xl text-[10px]">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-5 h-5 rounded-full text-[8px] font-bold text-white uppercase flex items-center justify-center border border-[#ECE6DD] ${member.avatarColor || 'bg-[#FF7A30]'}`}>
+                      {member.name.charAt(0)}
+                    </div>
+                    <span className="font-bold text-[#1E1E1E]">
+                      {isUser ? 'You (Host)' : member.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#8B8B8B] font-medium font-sans">{count} chosen</span>
+                    {isFinished ? (
+                      <span className="text-[#4CAF50] font-black text-[9px] flex items-center gap-0.5 bg-[#4CAF50]/10 px-1.5 py-0.5 rounded border border-[#4CAF50]/20">
+                        ✔ Done
+                      </span>
+                    ) : (
+                      <span className="text-[#FF7A30] font-black text-[9px] flex items-center gap-0.5 bg-[#FF7A30]/5 px-1.5 py-0.5 rounded border border-[#FF7A30]/20 animate-pulse">
+                        Choosing...
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
         <div className="bg-[#FFFFFF] border border-[#ECE6DD] p-4 rounded-xl flex justify-between items-center text-xs font-bold text-[#6D6D6D] shadow-sm">
           <span>Your selection tally</span>
           <span className="text-[#1E1E1E] font-black">{userSelections.length} dishes chosen</span>
         </div>
 
-        <button
-          onClick={confirmFoodSelections}
-          disabled={userSelections.length === 0}
-          className={`w-full py-3.5 border-none font-bold tracking-wider text-[11px] rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center font-sans ${
-            userSelections.length > 0 
-              ? 'bg-gradient-to-r from-[#FF7A30] to-[#FF8C42] text-white hover:scale-[1.01] active:scale-[0.99]' 
-              : 'bg-[#ECE6DD] text-[#8B8B8B] pointer-events-none'
-          }`}
-        >
-          Confirm food choices
-        </button>
+        {!isUserFinished ? (
+          <button
+            onClick={handleConfirmChoices}
+            disabled={userSelections.length === 0}
+            className={`w-full py-3.5 border-none font-bold tracking-wider text-[11px] rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center font-sans ${
+              userSelections.length > 0 
+                ? 'bg-gradient-to-r from-[#FF7A30] to-[#FF8C42] text-white hover:scale-[1.01] active:scale-[0.99]' 
+                : 'bg-[#ECE6DD] text-[#8B8B8B] pointer-events-none'
+            }`}
+          >
+            Confirm my food choices
+          </button>
+        ) : (
+          <button
+            onClick={handleConfirmChoices}
+            disabled={!allSquadFinished}
+            className={`w-full py-3.5 border-none font-bold tracking-wider text-[11px] rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center font-sans ${
+              allSquadFinished 
+                ? 'bg-gradient-to-r from-[#4CAF50] to-[#45a049] text-white hover:scale-[1.01] active:scale-[0.99]' 
+                : 'bg-[#ECE6DD] text-[#8B8B8B] pointer-events-none'
+            }`}
+          >
+            {allSquadFinished ? 'Start Group Voting Round' : 'Waiting for squad to finish choosing...'}
+          </button>
+        )}
       </div>
     </motion.div>
   )

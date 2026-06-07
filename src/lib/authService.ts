@@ -5,6 +5,7 @@ import {
   updateProfile,
   sendPasswordResetEmail,
   signInWithPopup,
+  signInWithRedirect,
   signOut as firebaseSignOut
 } from 'firebase/auth'
 import type { User } from 'firebase/auth'
@@ -21,7 +22,7 @@ const mapFirebaseUser = (user: User): AuthUser => {
   const email = user.email || ''
   const name = user.displayName || email.split('@')[0] || 'User'
   const username = email.split('@')[0] || ''
-  const avatarUrl = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=FF7A30&color=fff&bold=true&size=128`
+  const avatarUrl = user.photoURL || `https://api.dicebear.com/7.x/lorelei/svg?seed=${encodeURIComponent(name)}`
 
   return {
     uid: user.uid,
@@ -108,7 +109,7 @@ export const authService = {
     }
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=FF7A30&color=fff&bold=true&size=128`
+      const avatarUrl = `https://api.dicebear.com/7.x/lorelei/svg?seed=${encodeURIComponent(name)}`
       
       await updateProfile(userCredential.user, {
         displayName: name,
@@ -144,9 +145,20 @@ export const authService = {
    */
   signInWithGoogle: async (): Promise<AuthUser> => {
     try {
+      // Detect mobile browsers/devices to prefer redirect
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      if (isMobile) {
+        await signInWithRedirect(auth, googleProvider)
+        return new Promise(() => {})
+      }
       const userCredential = await signInWithPopup(auth, googleProvider)
       return mapFirebaseUser(userCredential.user)
     } catch (err: any) {
+      // Fallback to redirect if popup is blocked or cancelled
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user') {
+        await signInWithRedirect(auth, googleProvider)
+        return new Promise(() => {})
+      }
       throw getMappedAuthError(err)
     }
   },

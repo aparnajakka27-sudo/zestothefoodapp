@@ -7,6 +7,7 @@ export type RoomScreen =
   | 'lobby' 
   | 'food_selection' 
   | 'voting_round'
+  | 'final_dishes'
   | 'order_summary' 
   | 'final_plan'
   | 'login'
@@ -23,6 +24,7 @@ export interface Member {
   avatarColor: string
   isUser: boolean
   hasVoted?: boolean
+  avatarUrl?: string
 }
 
 export interface Dish {
@@ -97,7 +99,26 @@ export interface Message {
   avatarColor: string
   text?: string
   sticker?: string
+  gif?: string
+  mediaUrl?: string
+  voiceDuration?: number // duration in seconds
+  voiceWaveform?: number[] // array of sound levels (0-100)
+  reactions?: Record<string, string> // userId -> emoji
+  replyTo?: {
+    messageId: string
+    senderName: string
+    text?: string
+    sticker?: string
+  }
+  linkedDish?: {
+    id: string
+    name: string
+    image: string
+    price: string
+  }
+  isPinned?: boolean
   timestamp: string
   isSystem?: boolean
+  seenStatus?: 'sent' | 'delivered' | 'read'
 }
 

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Search, AlertCircle, ChevronDown, Plus, Minus, Star, MapPin, Compass, LogIn, LogOut, Loader2 } from 'lucide-react'
+import { ArrowLeft, Search, AlertCircle, ChevronDown, Plus, Minus, Star, MapPin, LogIn, LogOut, Loader2 } from 'lucide-react'
 import { useRoomStore } from '../lib/roomStore'
 import { Button } from '../components/ui/Button'
 import { CITIES } from '../constants/foodData'
 import { searchSittingRestaurants } from '../services/googleMaps'
 import type { Restaurant } from '../types'
+import { LocationPermission } from '../components/LocationPermission'
+import { RestaurantLoader } from '../components/RestaurantLoader'
 
 const PREFERENCE_OPTIONS = [
   'South Indian', 'North Indian', 'Pizza', 'Biryani', 'BBQ',
@@ -37,10 +39,14 @@ export const CreateRoom: React.FC = () => {
     signOut,
     locationPermission,
     detectedAreaName,
-    requestLocation
+    requestLocation,
+    latitude,
+    longitude
   } = useRoomStore()
 
   const [formError, setFormError] = useState<string | null>(null)
+  const [isLoadingRestaurants, setIsLoadingRestaurants] = useState(false)
+  const [loaderStage, setLoaderStage] = useState<'gps' | 'nominatim' | 'overpass' | 'filtering' | 'complete'>('gps')
   
   // Restaurant Search (Option A)
   const [searchQuery, setSearchQuery] = useState('')
@@ -54,7 +60,7 @@ export const CreateRoom: React.FC = () => {
     if (searchQuery.trim().length > 0) {
       setIsSearching(true)
       const delayDebounce = setTimeout(async () => {
-        const results = await searchSittingRestaurants(searchQuery)
+        const results = await searchSittingRestaurants(searchQuery, latitude, longitude, city)
         setSearchResults(results)
         setIsSearching(false)
       }, 300)
@@ -62,7 +68,7 @@ export const CreateRoom: React.FC = () => {
     } else {
       setSearchResults([])
     }
-  }, [searchQuery])
+  }, [searchQuery, latitude, longitude, city])
 
   const handleContinue = async () => {
     if (!groupName.trim()) {
@@ -80,24 +86,29 @@ export const CreateRoom: React.FC = () => {
     if (restaurantMode === 'help_decide') {
       if (locationPermission !== 'granted') {
         setFormError('Location permission is required to search restaurants near you.')
-        requestLocation()
         return
       }
       if (cravings.length === 0) {
         setFormError('Please choose at least one preference')
         return
       }
+      setIsLoadingRestaurants(true)
+      setLoaderStage('overpass')
+      setTimeout(() => setLoaderStage('filtering'), 1200)
     }
 
     setFormError(null)
-    await createRoom()
+    try {
+      await createRoom()
+    } catch (e) {
+      setFormError('Failed to create room. Please try again.')
+    } finally {
+      setIsLoadingRestaurants(false)
+    }
   }
 
   const handleSelectMode = (mode: 'already_chose' | 'help_decide') => {
     setRestaurantMode(mode)
-    if (mode === 'help_decide' && locationPermission === 'prompt') {
-      requestLocation()
-    }
   }
 
   const adjustPeopleCount = (amount: number) => {
@@ -105,6 +116,18 @@ export const CreateRoom: React.FC = () => {
     if (nextVal >= 2 && nextVal <= 20) {
       setPeopleCount(nextVal)
     }
+  }
+
+  if (isLoadingRestaurants) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-xl bg-white border border-[#ECE6DD] rounded-[28px] p-8 shadow-md"
+      >
+        <RestaurantLoader stage={loaderStage} />
+      </motion.div>
+    )
   }
 
   return (
@@ -359,71 +382,60 @@ export const CreateRoom: React.FC = () => {
             className="space-y-4 pt-3 border-t border-[#ECE6DD] text-left"
           >
             {/* GPS Geolocation Flow */}
-            <div className="bg-[#FAF7F2] border border-[#ECE6DD] p-4 rounded-2xl flex flex-col gap-3">
-              <div className="flex justify-between items-center">
-                <span className="text-[8.5px] font-black text-[#8B8B8B] tracking-wider uppercase">
-                  GPS Location Detection
-                </span>
-                <span className="text-[7.5px] font-black text-[#FF7A30] bg-[#FF7A30]/10 px-1.5 py-0.5 rounded">
-                  REQUIRED
-                </span>
-              </div>
-
+            <div className="flex flex-col gap-3">
               {locationPermission === 'prompt' && (
-                <div className="flex flex-col gap-2.5">
-                  <p className="text-[10px] text-[#6D6D6D] font-semibold uppercase tracking-wider leading-relaxed">
-                    Allow location access to find restaurants near you.
-                  </p>
-                  <Button
-                    type="button"
-                    variant="glass"
-                    onClick={requestLocation}
-                    className="w-full justify-center bg-[#FFFFFF] border-[#ECE6DD] text-[#1E1E1E] hover:bg-[#FAF7F2] text-[9px] font-black uppercase py-2.5 cursor-pointer shadow-sm"
-                  >
-                    <Compass className="w-4 h-4 mr-1.5 text-[#FF7A30]" /> Detect My GPS
-                  </Button>
-                </div>
+                <LocationPermission 
+                  onManualClick={() => useRoomStore.setState({ locationPermission: 'denied' })}
+                  onPermissionGranted={(area, lat, lon) => {
+                    useRoomStore.setState({ 
+                      detectedAreaName: area, 
+                      latitude: lat, 
+                      longitude: lon, 
+                      locationPermission: 'granted' 
+                    })
+                  }}
+                />
               )}
 
               {locationPermission === 'requesting' && (
-                <div className="flex items-center gap-2.5 py-2 text-[#6D6D6D] font-bold uppercase tracking-wider text-[9.5px]">
-                  <Loader2 className="w-4 h-4 text-[#FF7A30] animate-spin" />
-                  <span>Detecting GPS location...</span>
+                <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.75)', borderColor: 'rgba(236, 230, 221, 0.6)' }} className="p-6 rounded-3xl border flex items-center gap-3.5 shadow-sm text-xs font-bold uppercase tracking-wider text-[#1E1E1E]">
+                  <Loader2 className="w-5 h-5 text-[#FF7A30] animate-spin" />
+                  <span>Detecting your GPS location...</span>
                 </div>
               )}
 
               {locationPermission === 'denied' && (
-                <div className="flex flex-col gap-2.5">
-                  <div className="flex items-center gap-2 text-[#E85D5D] text-[9.5px] font-black uppercase tracking-wider">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>Location access denied</span>
+                <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.75)', borderColor: 'rgba(236, 230, 221, 0.6)' }} className="p-6 rounded-3xl border flex flex-col gap-3.5 shadow-sm">
+                  <div className="flex items-center gap-2 text-[#E85D5D] text-xs font-black uppercase tracking-wider">
+                    <AlertCircle className="w-4.5 h-4.5 shrink-0" />
+                    <span>Location access denied / manual override</span>
                   </div>
-                  <p className="text-[9px] text-[#8B8B8B] font-bold uppercase tracking-wider leading-normal">
-                    Please allow location permissions in your browser, or select a city below as fallback.
+                  <p className="text-[10px] text-[#6D6D6D] font-bold uppercase tracking-wider leading-normal">
+                    Select a city manually below to fetch restaurants, or retry permission.
                   </p>
                   <Button
                     type="button"
                     variant="glass"
                     onClick={requestLocation}
-                    className="w-full justify-center bg-[#FFFFFF] border-[#ECE6DD] text-[#6D6D6D] hover:text-[#1E1E1E] uppercase py-2.5 cursor-pointer shadow-sm"
+                    className="w-full justify-center bg-[#FFFFFF] border-[#ECE6DD] text-[#6D6D6D] hover:text-[#1E1E1E] uppercase py-2.5 cursor-pointer shadow-sm text-[9px] font-black"
                   >
-                    Retry GPS Detection
+                    Retry GPS Auto Detection
                   </Button>
                 </div>
               )}
 
               {locationPermission === 'granted' && (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between text-xs font-bold border-b border-[#ECE6DD] pb-2">
-                    <span className="text-[#8B8B8B] text-[9px] uppercase tracking-wider">Current Area Name</span>
-                    <span className="text-[#1E1E1E] font-black text-[10px] uppercase tracking-wider flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-[#FF7A30]" /> {detectedAreaName}
+                <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.75)', borderColor: 'rgba(236, 230, 221, 0.6)' }} className="p-6 rounded-3xl border flex flex-col gap-4 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-bold border-b border-[#ECE6DD]/40 pb-3">
+                    <span className="text-neutral-400 text-[9px] uppercase tracking-wider">📍 Detected Location</span>
+                    <span className="text-[#FF7A30] font-black text-[11px] uppercase tracking-wider flex items-center gap-1">
+                      <MapPin className="w-4 h-4 text-[#FF7A30]" /> {detectedAreaName}
                     </span>
                   </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[9.5px] font-bold text-[#6D6D6D] uppercase tracking-wider">Detected Radius Filter</label>
-                    <div className="grid grid-cols-4 gap-1.5 bg-[#FFFFFF] border border-[#ECE6DD] p-1 rounded-xl shadow-sm">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[9.5px] font-bold text-[#6D6D6D] uppercase tracking-wider">Search Radius</label>
+                    <div className="grid grid-cols-4 gap-1.5 bg-neutral-100/50 border border-neutral-200/20 p-1 rounded-xl">
                       {[2, 5, 10, 20].map((km) => (
                         <button
                           key={km}

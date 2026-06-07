@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Share2, Copy, RefreshCw, Star, MapPin, Check } from 'lucide-react'
+import { Share2, Copy, RefreshCw, Star, MapPin, Check, Award } from 'lucide-react'
 import { useRoomStore } from '../lib/roomStore'
 import { Button } from '../components/ui/Button'
 import { ZestoLogo } from '../components/ZestoLogo'
@@ -15,10 +15,17 @@ export const FinalPlan: React.FC = () => {
     splitType,
     customSplitShares,
     resetRound,
-    appliedCoupon
+    appliedCoupon,
+    setScreen,
+    setHasCompletedSplit
   } = useRoomStore()
 
   const [copiedText, setCopiedText] = useState(false)
+
+  // Mark split as complete to unlock Profile access
+  React.useEffect(() => {
+    setHasCompletedSplit(true)
+  }, [setHasCompletedSplit])
 
   if (!selectedRestaurant) return null
 
@@ -207,6 +214,14 @@ export const FinalPlan: React.FC = () => {
 
       {/* Action triggers */}
       <div className="flex flex-col gap-2.5 z-10">
+        <button
+          onClick={() => setScreen('profile')}
+          className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.01] active:scale-[0.99] text-white border-none text-[11px] font-bold tracking-wider rounded-xl transition-all cursor-pointer font-sans shadow-md flex items-center justify-center gap-1.5"
+        >
+          <Award className="w-4 h-4 text-white" />
+          View Food Journey & history
+        </button>
+
         <button
           onClick={handleShareWhatsApp}
           className="w-full py-4 bg-gradient-to-r from-[#FF7A30] to-[#FF8C42] hover:scale-[1.01] active:scale-[0.99] text-white border-none text-[11px] font-bold tracking-wider rounded-xl transition-all cursor-pointer font-sans shadow-md flex items-center justify-center gap-1.5"

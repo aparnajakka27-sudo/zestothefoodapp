@@ -1,6 +1,6 @@
 import React from 'react'
 import { Card } from './ui/Card'
-import { Shield, Zap, Receipt, Flame } from 'lucide-react'
+import { Shield, Brain, Receipt, Flame } from 'lucide-react'
 
 export const BentoFeatures: React.FC = () => {
   return (
@@ -26,23 +26,31 @@ export const BentoFeatures: React.FC = () => {
         {/* Bento Grid layout */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          {/* Box 1: Real-time Subscriptions (Col span 2) */}
+          {/* Box 1: AI Taste Matcher (Col span 2) */}
           <div className="md:col-span-2">
             <Card className="h-full flex flex-col justify-between p-8 hoverable min-h-[300px]">
               <div>
                 <div className="w-12 h-12 rounded-2xl bg-[#FF7A30]/10 border border-[#FF7A30]/20 flex items-center justify-center mb-6">
-                  <Zap className="w-6 h-6 text-[#FF7A30]" />
+                  <Brain className="w-6 h-6 text-[#FF7A30]" />
                 </div>
-                <h3 className="text-2xl font-black font-display text-[#1E1E1E] mb-3">Supabase Realtime Sync</h3>
+                <h3 className="text-2xl font-black font-display text-[#1E1E1E] mb-3">AI Squad Taste Matcher</h3>
                 <p className="text-sm text-[#6D6D6D] leading-relaxed font-semibold max-w-md">
-                  Powered by Supabase PostgreSQL WebSockets. See votes, vetoes, and active room members instantly. Watch the group status update in milliseconds without lag.
+                  Trained on your squad's combined cravings. Zesto automatically analyzes group taste profiles in real-time, predicting your ideal dinner match with 96% accuracy before voting even begins.
                 </p>
               </div>
               
               {/* Graphical illustration */}
-              <div className="flex items-center gap-2 mt-8 bg-[#FAF7F2] border border-[#ECE6DD] px-4 py-2.5 rounded-full self-start">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                <span className="text-xs text-[#6D6D6D] font-bold">12ms Latency connected to postgres-db</span>
+              <div className="flex flex-wrap gap-4 mt-8">
+                <div className="flex items-center gap-2 bg-[#FAF7F2] border border-[#ECE6DD] px-3.5 py-1.5 rounded-full">
+                  <span className="text-xs font-black text-orange-600">🌶️ Medium-Hot Spice</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#FAF7F2] border border-[#ECE6DD] px-3.5 py-1.5 rounded-full">
+                  <span className="text-xs font-black text-[#6D6D6D]">🍔 Casual Dining</span>
+                </div>
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3.5 py-1.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-black text-emerald-700">96% Group Match Confidence</span>
+                </div>
               </div>
             </Card>
           </div>

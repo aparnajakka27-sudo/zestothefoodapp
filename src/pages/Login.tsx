@@ -52,12 +52,12 @@ export const Login: React.FC = () => {
   const activeError = localError || authError
 
   return (
-    <div className="w-full max-w-6xl mx-auto min-h-[80vh] flex items-center justify-center p-2 md:p-6">
+    <div className="w-full max-w-6xl mx-auto min-h-[80vh] flex items-center justify-center p-2 md:p-6 relative pt-16 md:pt-6">
       
       {/* Back button */}
       <button 
         onClick={() => setScreen('landing')}
-        className="absolute top-8 left-8 flex items-center gap-2 text-xs font-bold text-[#6D6D6D] hover:text-[#1E1E1E] transition-colors cursor-pointer select-none bg-white py-2 px-4 rounded-full border border-[#ECE6DD] shadow-sm"
+        className="absolute top-4 left-4 md:top-8 md:left-8 flex items-center gap-2 text-xs font-bold text-[#6D6D6D] hover:text-[#1E1E1E] transition-colors cursor-pointer select-none bg-white py-2 px-4 rounded-full border border-[#ECE6DD] shadow-sm"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         Back to Home

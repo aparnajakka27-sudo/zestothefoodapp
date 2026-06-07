@@ -265,12 +265,21 @@ export const fetchRestaurants = async (
 }
 
 // Flow A: Search for a specific restaurant when sitting
-export const searchSittingRestaurants = async (query: string): Promise<Restaurant[]> => {
+export const searchSittingRestaurants = async (
+  query: string,
+  lat?: number | null,
+  lon?: number | null,
+  city?: string
+): Promise<Restaurant[]> => {
   const q = query.toLowerCase().trim()
   if (!q) return []
   
-  // Real local search simulation by OSM or Fallback
-  const allRes = await fetchRestaurants(null, null, 5, ['Pizza', 'Biryani', 'Burgers'], '₹₹', 'Hyderabad')
+  const latitude = lat !== undefined ? lat : null
+  const longitude = lon !== undefined ? lon : null
+  const cityName = city || 'Hyderabad'
+  
+  // Real local search using coordinates if available, otherwise city fallback
+  const allRes = await fetchRestaurants(latitude, longitude, 10, [], '₹₹', cityName)
   const matched = allRes.filter(r => r.name.toLowerCase().includes(q))
   
   if (matched.length === 0 && q.length > 2) {

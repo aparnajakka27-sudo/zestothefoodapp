@@ -10,9 +10,21 @@ import { SocialWall } from './components/SocialWall'
 import { Footer } from './components/Footer'
 import { RoomFlow } from './components/RoomFlow'
 import { useRoomStore } from './lib/roomStore'
+import { DemoModal } from './components/DemoModal'
 
 function App() {
   const screen = useRoomStore((state) => state.screen)
+  const { isDemoOpen, setIsDemoOpen, openSelector } = useRoomStore()
+
+  // Initialize theme preference on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('zesto_theme') || 'light'
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [])
 
   // Initialize Lenis smooth scrolling for premium Apple-level feel when on landing page
   useEffect(() => {
@@ -66,6 +78,15 @@ function App() {
 
       {/* Fullscreen Room Flow & Voting Interface overlay */}
       <RoomFlow />
+
+      <DemoModal
+        isOpen={isDemoOpen}
+        onClose={() => setIsDemoOpen(false)}
+        onCreateRoom={() => {
+          setIsDemoOpen(false)
+          openSelector()
+        }}
+      />
     </div>
   )
 }

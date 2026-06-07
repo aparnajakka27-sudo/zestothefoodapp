@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MessageSquare, Send, X } from 'lucide-react'
+import { MessageSquare, Send, X, ArrowLeft, Loader2 } from 'lucide-react'
 import { useRoomStore } from '../lib/roomStore'
+import { LocationPermission } from './LocationPermission'
 
 // Pages
 import { CreateOrJoin } from '../pages/CreateOrJoin'
@@ -19,6 +20,7 @@ import { ForgotPassword } from '../pages/ForgotPassword'
 import { Welcome } from '../pages/Welcome'
 import { NameCollection } from '../pages/NameCollection'
 import { Profile } from '../pages/Profile'
+import { FinalDishes } from '../pages/FinalDishes'
 
 export const RoomFlow: React.FC = () => {
   const [inputText, setInputText] = useState('')
@@ -26,6 +28,8 @@ export const RoomFlow: React.FC = () => {
   
   const { 
     screen, 
+    setScreen,
+    closeFlow,
     joinRoom,
     chatMessages, 
     chatDrawerOpen, 
@@ -33,7 +37,8 @@ export const RoomFlow: React.FC = () => {
     unreadChatCount, 
     sendChatMessage, 
     toggleChatDrawer, 
-    members 
+    members,
+    locationPermission
   } = useRoomStore()
 
   // Listen for invite link in URL on mount
@@ -58,25 +63,30 @@ export const RoomFlow: React.FC = () => {
   const pageVariants = {
     initial: {
       opacity: 0,
-      filter: 'blur(4px)',
-      scale: 0.99
+      y: 16,
+      filter: 'blur(8px)',
+      scale: 0.97
     },
     animate: {
       opacity: 1,
+      y: 0,
       filter: 'blur(0px)',
       scale: 1,
       transition: {
-        duration: 0.25,
-        ease: 'easeOut' as const
+        type: 'spring' as const,
+        damping: 24,
+        stiffness: 170,
+        mass: 0.8
       }
     },
     exit: {
       opacity: 0,
-      filter: 'blur(4px)',
-      scale: 0.99,
+      y: -12,
+      filter: 'blur(6px)',
+      scale: 0.98,
       transition: {
-        duration: 0.2,
-        ease: 'easeIn' as const
+        duration: 0.18,
+        ease: 'easeInOut' as const
       }
     }
   }
@@ -92,12 +102,127 @@ export const RoomFlow: React.FC = () => {
     sendChatMessage(phrase)
   }
 
+  const handleBack = () => {
+    switch (screen) {
+      case 'selector':
+        closeFlow()
+        break
+      case 'create_room':
+      case 'join_room':
+      case 'welcome':
+        setScreen('selector')
+        break
+      case 'restaurant_choice':
+        setScreen('create_room')
+        break
+      case 'lobby':
+        setScreen('selector')
+        break
+      case 'food_selection':
+        setScreen('lobby')
+        break
+      case 'voting_round':
+        setScreen('food_selection')
+        break
+      case 'final_dishes':
+        setScreen('voting_round')
+        break
+      case 'order_summary':
+        setScreen('final_dishes')
+        break
+      case 'final_plan':
+        setScreen('order_summary')
+        break
+      case 'login':
+      case 'signup':
+      case 'name_collection':
+        setScreen('welcome')
+        break
+      case 'forgot_password':
+        setScreen('login')
+        break
+      case 'profile':
+        setScreen('lobby')
+        break
+      default:
+        closeFlow()
+    }
+  }
+
   return (
     <AnimatePresence mode="wait">
       <div className="fixed inset-0 z-50 w-full h-full overflow-y-auto bg-[#FAF7F2] flex justify-center items-start py-8 px-4 select-none text-[#1E1E1E]">
         
-        {/* Glow overlay */}
-        <div className="absolute inset-0 bg-radial-gradient from-[#FF7A30]/5 via-transparent to-transparent opacity-40 pointer-events-none" />
+        {/* Modern Animated Background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0">
+          {/* Subtle Grid Overlay */}
+          <div className="absolute inset-0 grid-bg opacity-60" />
+          
+          {/* Film Grain Layer */}
+          <div className="film-grain-active" />
+
+          {/* Glow Layer / Moving Blur Blobs */}
+          <div className="absolute inset-0 filter blur-[90px] md:blur-[130px] opacity-[0.22] dark:opacity-[0.15] mix-blend-multiply dark:mix-blend-screen">
+            {/* Coral orange blob */}
+            <motion.div
+              animate={{
+                x: [0, 80, -40, 90, -50, 0],
+                y: [0, -90, 60, -120, 80, 0],
+                scale: [1, 1.2, 0.9, 1.1, 0.95, 1],
+              }}
+              transition={{
+                duration: 25,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+              className="absolute w-[350px] h-[350px] md:w-[450px] md:h-[450px] rounded-full bg-gradient-to-br from-[#FF7A30] to-[#FF8C42] top-[-10%] left-[5%]"
+            />
+
+            {/* Amber golden blob */}
+            <motion.div
+              animate={{
+                x: [0, -60, 70, -80, 40, 0],
+                y: [0, 80, -80, 90, -50, 0],
+                scale: [1, 1.15, 0.95, 1.15, 0.9, 1],
+              }}
+              transition={{
+                duration: 30,
+                repeat: Infinity,
+                ease: 'easeInOut',
+                delay: 2,
+              }}
+              className="absolute w-[300px] h-[300px] md:w-[400px] md:h-[400px] rounded-full bg-gradient-to-tr from-amber-400 to-yellow-300 bottom-[-10%] right-[10%]"
+            />
+
+            {/* Rose pink accent blob */}
+            <motion.div
+              animate={{
+                x: [0, 50, -70, 40, -30, 0],
+                y: [0, 70, 60, -100, 80, 0],
+                scale: [1, 1.15, 0.85, 1.05, 0.95, 1],
+              }}
+              transition={{
+                duration: 28,
+                repeat: Infinity,
+                ease: 'easeInOut',
+                delay: 4,
+              }}
+              className="absolute w-[280px] h-[280px] md:w-[350px] md:h-[350px] rounded-full bg-gradient-to-br from-rose-400 to-orange-300 top-[30%] right-[20%]"
+            />
+          </div>
+          
+          {/* Radial mask to blend edges nicely */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,#FAF7F2_90%)] dark:bg-[radial-gradient(circle_at_center,transparent_40%,#0F172A_90%)]" />
+        </div>
+
+        {/* Back Button */}
+        <button
+          onClick={handleBack}
+          className="fixed top-6 left-6 z-40 flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#ECE6DD] hover:bg-[#F4EFE8] text-neutral-700 hover:text-neutral-900 transition-all font-bold text-xs shadow-sm cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-neutral-600" />
+          Back
+        </button>
 
         <motion.div
           key={screen}
@@ -114,6 +239,7 @@ export const RoomFlow: React.FC = () => {
           {screen === 'lobby' && <Lobby />}
           {screen === 'food_selection' && <FoodSelection />}
           {screen === 'voting_round' && <VotingRound />}
+          {screen === 'final_dishes' && <FinalDishes />}
           {screen === 'order_summary' && <OrderSummary />}
           {screen === 'final_plan' && <FinalPlan />}
           {screen === 'login' && <Login />}
@@ -125,7 +251,7 @@ export const RoomFlow: React.FC = () => {
         </motion.div>
 
         {/* FLOATING CHAT WIDGET LAUNCHER */}
-        {['lobby', 'food_selection', 'voting_round'].includes(screen) && (
+        {['lobby', 'food_selection', 'voting_round', 'final_dishes'].includes(screen) && (
           <button
             onClick={() => toggleChatDrawer()}
             className="fixed bottom-6 right-6 z-40 p-4 bg-[#FF7A30] hover:bg-[#FF8C42] text-white rounded-full shadow-lg hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center transition-all border-2 border-white"
@@ -315,6 +441,40 @@ export const RoomFlow: React.FC = () => {
             </>
           )}
         </AnimatePresence>
+
+        {/* Location Permission Corner Card */}
+        {['create_room', 'join_room', 'lobby'].includes(screen) && locationPermission === 'prompt' && (
+          <div className="fixed top-6 right-6 z-[100] w-full max-w-[320px] p-2">
+            <LocationPermission 
+              onManualClick={() => {
+                useRoomStore.setState({ locationPermission: 'denied' })
+                localStorage.setItem('zesto_location_permission', 'denied')
+              }}
+              onPermissionGranted={(area, lat, lon) => {
+                useRoomStore.setState({ 
+                  detectedAreaName: area, 
+                  latitude: lat, 
+                  longitude: lon, 
+                  locationPermission: 'granted' 
+                })
+                localStorage.setItem('zesto_latitude', String(lat))
+                localStorage.setItem('zesto_longitude', String(lon))
+                localStorage.setItem('zesto_location_permission', 'granted')
+                localStorage.setItem('zesto_area_name', area)
+              }}
+            />
+          </div>
+        )}
+
+        {/* Location Requesting Geolocation Corner Card */}
+        {['create_room', 'join_room', 'lobby'].includes(screen) && locationPermission === 'requesting' && (
+          <div className="fixed top-6 right-6 z-[100] w-full max-w-[240px] p-2">
+            <div className="w-full bg-white p-5 rounded-2xl shadow-lg border border-neutral-100 flex items-center gap-3 text-xs font-bold uppercase tracking-wider text-[#1E1E1E]">
+              <Loader2 className="w-5 h-5 text-[#FF7A30] animate-spin" />
+              <span>Finding your location…</span>
+            </div>
+          </div>
+        )}
 
       </div>
     </AnimatePresence>

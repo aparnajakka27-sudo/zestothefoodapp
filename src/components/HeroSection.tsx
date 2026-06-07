@@ -87,7 +87,7 @@ const ParticleCanvas: React.FC = () => {
 export const HeroSection: React.FC = () => {
   const [loopState, setLoopState] = useState<number>(0)
   const containerRef = useRef<HTMLDivElement>(null)
-  const openSelector = useRoomStore((state) => state.openSelector)
+  const { openSelector, setIsDemoOpen } = useRoomStore()
 
   // GPU-Accelerated Mouse Tilt Coordinates (stiffness/damping tuned for premium Apple-level lag-free transitions)
   const mouseX = useMotionValue(0)
@@ -171,20 +171,20 @@ export const HeroSection: React.FC = () => {
     <section 
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className="relative min-h-screen w-full flex items-center pt-28 pb-16 px-6 md:px-12 overflow-hidden bg-[#FAF7F2] select-none z-0"
+      className="relative min-h-screen w-full flex items-center pt-28 pb-16 px-6 md:px-12 overflow-hidden bg-[#FAF7F2] dark:bg-[#111827] select-none z-0 transition-colors duration-300"
     >
       
       {/* 1. GPU-Accelerated Particle Canvas Backdrop */}
       <ParticleCanvas />
 
       {/* 2. Fluttering Grain overlay */}
-      <div className="film-grain-active pointer-events-none z-10" style={{ transform: 'translate3d(0,0,0)' }} />
+      <div className="film-grain-active pointer-events-none z-10 animate-fade-in" style={{ transform: 'translate3d(0,0,0)' }} />
 
       {/* 3. Light overlays & Vignette borders */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#FAF7F2]/95 via-transparent to-[#FAF7F2]/95 pointer-events-none z-10" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#FAF7F2]/90 via-transparent to-[#FAF7F2]/90 pointer-events-none z-10" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#FAF7F2]/95 dark:from-[#0F172A]/95 via-transparent to-[#FAF7F2]/95 dark:to-[#0F172A]/95 pointer-events-none z-10 transition-colors duration-300" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#FAF7F2]/90 dark:from-[#0F172A]/90 via-transparent to-[#FAF7F2]/90 dark:to-[#0F172A]/90 pointer-events-none z-10 transition-colors duration-300" />
 
-      {/* 4. Layered breathing lights (GPU accelerated with transform translate3d) */}
+      {/* 4. Layered breathing lights (GPU accelerated with transform translate3d) - HIDDEN IN DARK MODE FOR SOLID SURFACE */}
       <motion.div 
         animate={{
           scale: [1, 1.12, 1],
@@ -193,7 +193,7 @@ export const HeroSection: React.FC = () => {
           y: [0, -15, 0]
         }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-[#FF7A30] filter blur-[140px] pointer-events-none z-10 translate-3d"
+        className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-[#FF7A30] filter blur-[140px] pointer-events-none z-10 translate-3d dark:hidden"
         style={{ transform: 'translate3d(0,0,0)' }}
       />
       <motion.div 
@@ -204,7 +204,7 @@ export const HeroSection: React.FC = () => {
           y: [0, 15, 0]
         }}
         transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 2.5 }}
-        className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full bg-[#FF8C42] filter blur-[150px] pointer-events-none z-10 translate-3d"
+        className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full bg-[#FF8C42] filter blur-[150px] pointer-events-none z-10 translate-3d dark:hidden"
         style={{ transform: 'translate3d(0,0,0)' }}
       />
 
@@ -260,7 +260,7 @@ export const HeroSection: React.FC = () => {
               <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
               Create Room
             </Button>
-            <Button variant="glass" size="lg" className="group border-[#ECE6DD] hover:bg-[#F4EFE8] text-[#1E1E1E] font-bold px-8 flex items-center gap-2 shadow-sm">
+            <Button onClick={() => setIsDemoOpen(true)} variant="glass" size="lg" className="group border-[#ECE6DD] hover:bg-[#F4EFE8] text-[#1E1E1E] font-bold px-8 flex items-center gap-2 shadow-sm">
               <Play className="w-4 h-4 text-[#FF7A30] fill-current" />
               Watch Live Demo
             </Button>

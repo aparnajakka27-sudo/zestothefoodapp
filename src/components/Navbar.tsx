@@ -12,6 +12,9 @@ export const Navbar: React.FC = () => {
   const guestName = useRoomStore((state) => state.guestName)
   const signOut = useRoomStore((state) => state.signOut)
   const setScreen = useRoomStore((state) => state.setScreen)
+  const theme = useRoomStore((state) => state.theme)
+  const toggleTheme = useRoomStore((state) => state.toggleTheme)
+  const hasCompletedSplit = useRoomStore((state) => state.hasCompletedSplit)
 
   const menuItems = [
     { name: 'How It Works', href: '#how-it-works' },
@@ -19,6 +22,8 @@ export const Navbar: React.FC = () => {
     { name: 'Features', href: '#features' },
     { name: 'Match Story', href: '#match-story' },
   ]
+
+  const avatarUrl = user?.avatarUrl || (guestName ? `https://api.dicebear.com/7.x/lorelei/svg?seed=${encodeURIComponent(guestName)}` : `https://api.dicebear.com/7.x/lorelei/svg?seed=Guest`)
 
   return (
     <>
@@ -28,48 +33,58 @@ export const Navbar: React.FC = () => {
         transition={{ duration: 0.6, type: "spring", stiffness: 100 }}
         className="fixed top-6 left-0 right-0 z-50 flex justify-center px-6 pointer-events-none"
       >
-        <nav className="w-full max-w-5xl glass-card rounded-full px-6 py-3.5 flex items-center justify-between pointer-events-auto relative shadow-sm border-[#ECE6DD]">
-          
-          {/* Glass glare effect inside navbar */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
+        <nav className="w-full max-w-7xl px-8 py-4.5 flex items-center justify-between pointer-events-auto relative glass-card rounded-full shadow-md border border-[#ECE6DD]/65 dark:border-white/5 bg-white/90 dark:bg-[#1F2937]/90 backdrop-blur-md transition-colors duration-300">
 
           {/* Logo */}
           <a href="#" className="flex items-center gap-2 group select-none relative z-10">
             <ZestoLogo className="w-8 h-8 group-hover:scale-105 transition-transform duration-300" />
-            <span className="text-xl font-black font-display tracking-tight text-[#1E1E1E] ml-1">
-              Zesto
+            <span className="text-2xl font-black font-display tracking-tight text-[#1E1E1E] dark:text-[#F9FAFB] ml-1 flex items-center gap-[1px]">
+              Zest
+              <span className="text-[#FF7A30] relative inline-block">
+                o
+                <span className="absolute -top-1.5 right-0.5 text-[8.5px] text-emerald-500 pointer-events-none select-none">🌱</span>
+              </span>
             </span>
-            <span className="hidden lg:inline-block h-4 w-px bg-[#ECE6DD] mx-2" />
-            <span className="hidden lg:inline-block text-[10px] text-[#8B8B8B] font-bold uppercase tracking-wider">
+            <span className="hidden lg:inline-block h-4 w-px bg-[#ECE6DD] dark:bg-white/10 mx-3.5" />
+            <span className="hidden lg:inline-block text-[9.5px] text-[#8B8B8B] dark:text-white/60 font-bold uppercase tracking-wider">
               Decide where to eat together
             </span>
           </a>
 
           {/* Center nav */}
-          <div className="hidden md:flex items-center gap-8 relative z-10">
+          <div className="hidden md:flex items-center gap-12 relative z-10">
             {menuItems.map((item) => (
               <a
                 key={item.name}
                 href={item.href}
-                className="text-[#6D6D6D] hover:text-[#1E1E1E] text-xs font-semibold tracking-wide uppercase transition-colors duration-200"
+                className="group relative text-[11.5px] font-extrabold tracking-widest uppercase py-1.5 px-1 hover:scale-105 hover:-translate-y-0.5 transition-all duration-300 text-[#1E1E1E]/80 dark:text-white/75 hover:text-[#1E1E1E] dark:hover:text-white flex flex-col items-center cursor-pointer"
               >
-                {item.name}
+                <span>{item.name}</span>
+                {/* Underline Reveal & soft glow */}
+                <span className="absolute bottom-0 w-0 h-[2px] bg-[#FF7A30] transition-all duration-300 group-hover:w-full group-hover:shadow-[0_0_8px_rgba(255,122,48,0.6)]" />
               </a>
             ))}
           </div>
 
           {/* Right actions */}
-          <div className="hidden md:flex items-center gap-4 relative z-10">
+          <div className="hidden md:flex items-center gap-3.5 relative z-10">
+            <Button onClick={openSelector} variant="primary" size="sm" className="group text-xs py-1.5 px-4 cursor-pointer font-bold text-white bg-gradient-to-r from-[#FF7A30] to-[#FF8C42] border-none shadow-sm">
+              Get Started <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </Button>
+
+            {/* Theme Toggle Button */}
+            <button 
+              onClick={toggleTheme}
+              className="w-8 h-8 rounded-full border border-[#ECE6DD] bg-[#FAF7F2] hover:bg-[#ECE6DD]/40 text-xs flex items-center justify-center transition-colors cursor-pointer shadow-sm relative z-10"
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            >
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
+
             {user || guestName ? (
               <div className="relative group">
                 <button className="flex items-center gap-2 cursor-pointer focus:outline-none">
-                  {user?.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.name} className="w-8 h-8 rounded-full border-2 border-[#FF7A30] object-cover" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-[#FF7A30] text-white flex items-center justify-center font-bold text-xs uppercase">
-                      {(user?.name || guestName || '').split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </div>
-                  )}
+                  <img src={avatarUrl} alt={user?.name || guestName || 'User'} className="w-8 h-8 rounded-full border-2 border-[#FF7A30] object-cover bg-white" />
                   <span className="text-[#1E1E1E] text-xs font-bold hidden lg:inline-block max-w-[100px] truncate">
                     {user?.name || `${guestName} (Guest)`}
                   </span>
@@ -81,9 +96,22 @@ export const Navbar: React.FC = () => {
                     <p className="text-[#1E1E1E] text-xs font-bold truncate">{user?.name || guestName}</p>
                     <p className="text-[#6D6D6D] text-[10px] truncate">{user?.email || 'Quick Start Session'}</p>
                   </div>
-                  <button onClick={() => setScreen('profile')} className="w-full text-left px-2 py-1.5 text-xs text-[#1E1E1E] hover:bg-[#FAF7F2] rounded-lg font-semibold cursor-pointer transition-colors mb-1">
-                    My Profile
-                  </button>
+                  
+                  {hasCompletedSplit ? (
+                    <button onClick={() => setScreen('profile')} className="w-full text-left px-2 py-1.5 text-xs text-[#1E1E1E] hover:bg-[#FAF7F2] rounded-lg font-semibold cursor-pointer transition-colors mb-1">
+                      My Profile
+                    </button>
+                  ) : (
+                    <button 
+                      disabled 
+                      className="w-full text-left px-2 py-1.5 text-xs text-[#8B8B8B] bg-[#FAF7F2]/45 rounded-lg font-semibold cursor-not-allowed flex items-center justify-between mb-1"
+                      title="Complete your first split session to unlock profile history!"
+                    >
+                      <span>My Profile</span>
+                      <span className="text-[10px]">🔒</span>
+                    </button>
+                  )}
+
                   {guestName && !user && (
                     <button onClick={() => setScreen('login')} className="w-full text-left px-2 py-1.5 text-xs text-[#FF7A30] hover:bg-[#FF7A30]/5 rounded-lg font-semibold cursor-pointer transition-colors mb-1">
                       Sign In to Save Data
@@ -95,22 +123,34 @@ export const Navbar: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <Button onClick={() => setScreen('login')} variant="ghost" size="sm" className="text-[#6D6D6D] hover:text-[#1E1E1E] text-xs py-1.5 font-bold">
-                Sign In
-              </Button>
+              <div className="relative group">
+                <button 
+                  onClick={() => setScreen('login')}
+                  className="flex items-center gap-2 cursor-pointer focus:outline-none"
+                  title="Sign In / Create Account"
+                >
+                  <img src={avatarUrl} alt="Guest" className="w-8 h-8 rounded-full border border-[#ECE6DD] bg-[#FAF7F2] p-0.5 object-cover" />
+                </button>
+              </div>
             )}
-            <Button onClick={openSelector} variant="primary" size="sm" className="group text-xs py-1.5 px-4 cursor-pointer font-bold text-white bg-gradient-to-r from-[#FF7A30] to-[#FF8C42] border-none shadow-sm">
-              Get Started <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-            </Button>
           </div>
 
-          {/* Mobile Menu Toggle */}
-          <button 
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 text-[#6D6D6D] hover:text-[#1E1E1E] relative z-10"
-          >
-            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          {/* Mobile Actions Header */}
+          <div className="flex md:hidden items-center gap-2 relative z-10">
+            <button 
+              onClick={toggleTheme}
+              className="w-8 h-8 rounded-full border border-[#ECE6DD] bg-[#FAF7F2] hover:bg-[#ECE6DD]/40 text-xs flex items-center justify-center transition-colors cursor-pointer shadow-sm"
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            >
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
+            <button 
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 text-[#6D6D6D] hover:text-[#1E1E1E] relative z-10 cursor-pointer"
+            >
+              {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
 
         </nav>
       </motion.div>
@@ -140,21 +180,27 @@ export const Navbar: React.FC = () => {
                 {user || guestName ? (
                   <div className="flex flex-col gap-2 p-3 bg-[#FAF7F2] border border-[#ECE6DD] rounded-2xl">
                     <div className="flex items-center gap-3">
-                      {user?.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={user.name} className="w-9 h-9 rounded-full border border-[#FF7A30] object-cover" />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-[#FF7A30] text-white flex items-center justify-center font-bold text-sm uppercase">
-                          {(user?.name || guestName || '').split(' ').map(n => n[0]).join('').slice(0, 2)}
-                        </div>
-                      )}
+                      <img src={avatarUrl} alt={user?.name || guestName || 'User'} className="w-9 h-9 rounded-full border border-[#FF7A30] object-cover bg-white" />
                       <div className="text-left">
                         <p className="text-[#1E1E1E] text-sm font-bold truncate leading-tight">{user?.name || `${guestName} (Guest)`}</p>
                         <p className="text-[#6D6D6D] text-[10px] truncate leading-tight">{user?.email || 'Quick Start Session'}</p>
                       </div>
                     </div>
-                    <button onClick={() => { setIsOpen(false); setScreen('profile'); }} className="w-full text-center mt-1.5 py-1.5 text-xs text-[#1E1E1E] hover:bg-[#FAF7F2] rounded-xl font-bold border border-[#ECE6DD] cursor-pointer bg-white transition-colors">
-                      My Profile
-                    </button>
+                    
+                    {hasCompletedSplit ? (
+                      <button onClick={() => { setIsOpen(false); setScreen('profile'); }} className="w-full text-center mt-1.5 py-1.5 text-xs text-[#1E1E1E] hover:bg-[#FAF7F2] rounded-xl font-bold border border-[#ECE6DD] cursor-pointer bg-white transition-colors">
+                        My Profile
+                      </button>
+                    ) : (
+                      <button 
+                        disabled 
+                        className="w-full text-center mt-1.5 py-1.5 text-xs text-[#8B8B8B] bg-[#FAF7F2]/45 rounded-xl font-bold border border-[#ECE6DD] cursor-not-allowed flex items-center justify-center gap-1.5"
+                        title="Complete your first split session to unlock!"
+                      >
+                        <span>My Profile 🔒</span>
+                      </button>
+                    )}
+
                     {guestName && !user && (
                       <button onClick={() => { setIsOpen(false); setScreen('login'); }} className="w-full text-center mt-1 py-1.5 text-xs text-[#FF7A30] hover:bg-[#FF7A30]/5 rounded-xl font-bold border border-[#FF7A30]/20 cursor-pointer bg-white transition-colors">
                         Sign In to Save Data

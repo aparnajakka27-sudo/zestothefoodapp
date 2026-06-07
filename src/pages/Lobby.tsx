@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Share2, Play, CheckCircle2, Circle, Star } from 'lucide-react'
+import { Share2, Play, CheckCircle2, Circle, Star, Compass } from 'lucide-react'
 import { useRoomStore } from '../lib/roomStore'
 
 export const Lobby: React.FC = () => {
@@ -13,7 +13,10 @@ export const Lobby: React.FC = () => {
     selectedRestaurant,
     setReady,
     startFoodSelection,
-    resetRound
+    resetRound,
+    midpointAreaName,
+    restaurantMode,
+    detectedAreaName
   } = useRoomStore()
 
   const [copiedLink, setCopiedLink] = useState(false)
@@ -39,7 +42,7 @@ export const Lobby: React.FC = () => {
     }
   }
 
-  if (!selectedRestaurant) return null
+  if (restaurantMode === 'already_chose' && !selectedRestaurant) return null
 
   return (
     <motion.div
@@ -66,26 +69,45 @@ export const Lobby: React.FC = () => {
         
         {/* Left column: Restaurant detail & Invite bar */}
         <div className="md:col-span-7 flex flex-col gap-5">
-          {/* Restaurant details banner */}
-          <div className="bg-[#FFFFFF] border border-[#ECE6DD] p-4 rounded-2xl flex gap-4 text-left items-center justify-between shadow-sm">
-            <div className="flex items-center gap-3">
-              <img src={selectedRestaurant.image} alt={selectedRestaurant.name} className="w-14 h-14 object-cover rounded-xl border border-[#ECE6DD] shrink-0" />
-              <div>
-                <h3 className="text-xs font-bold text-[#1E1E1E] tracking-wide truncate max-w-[170px]">{selectedRestaurant.name}</h3>
-                <p className="text-[10px] text-[#FF7A30] font-bold tracking-wide mt-0.5 flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  <span>{selectedRestaurant.rating}</span>
-                  <span className="text-[#8B8B8B] font-normal">•</span>
-                  <span className="text-[#6D6D6D] font-normal">{selectedRestaurant.distance}</span>
-                </p>
+          {/* Restaurant details banner / Midpoint geocode info card */}
+          {restaurantMode === 'already_chose' && selectedRestaurant ? (
+            <div className="bg-[#FFFFFF] border border-[#ECE6DD] p-4 rounded-2xl flex gap-4 text-left items-center justify-between shadow-sm">
+              <div className="flex items-center gap-3">
+                <img src={selectedRestaurant.image} alt={selectedRestaurant.name} className="w-14 h-14 object-cover rounded-xl border border-[#ECE6DD] shrink-0" />
+                <div>
+                  <h3 className="text-xs font-bold text-[#1E1E1E] tracking-wide truncate max-w-[170px]">{selectedRestaurant.name}</h3>
+                  <p className="text-[10px] text-[#FF7A30] font-bold tracking-wide mt-0.5 flex items-center gap-1">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <span>{selectedRestaurant.rating}</span>
+                    <span className="text-[#8B8B8B] font-normal">•</span>
+                    <span className="text-[#6D6D6D] font-normal">{selectedRestaurant.distance}</span>
+                  </p>
+                </div>
+              </div>
+              {selectedRestaurant.discounts && (
+                <span className="text-[10px] font-bold text-[#FF7A30] bg-[#FF7A30]/5 border border-[#FF7A30]/10 px-2.5 py-1 rounded shrink-0">
+                  {selectedRestaurant.discounts}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(20px)', borderColor: 'rgba(236, 230, 221, 0.6)' }} className="p-4 rounded-2xl border flex gap-4 text-left items-center justify-between shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 bg-[#FFF5F0] border border-[#FF7A30]/20 rounded-xl flex items-center justify-center text-[#FF7A30] shrink-0">
+                  <Compass className="w-6 h-6 animate-spin-slow" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-[#FF7A30] uppercase tracking-widest block">Meeting Point Synced</span>
+                  <h3 className="text-sm font-black text-[#1E1E1E] tracking-wide mt-0.5">
+                    📍 {midpointAreaName ? `Best area: ${midpointAreaName}` : detectedAreaName ? `Lobby near: ${detectedAreaName}` : 'Acquiring Lobby Area...'}
+                  </h3>
+                  <p className="text-[9.5px] text-[#8B8B8B] font-bold uppercase tracking-wider mt-1">
+                    {midpointAreaName ? 'Midpoint calculated from all squad coordinate offsets.' : 'Waiting for squad members to sync location coordinates.'}
+                  </p>
+                </div>
               </div>
             </div>
-            {selectedRestaurant.discounts && (
-              <span className="text-[10px] font-bold text-[#FF7A30] bg-[#FF7A30]/5 border border-[#FF7A30]/10 px-2.5 py-1 rounded shrink-0">
-                {selectedRestaurant.discounts}
-              </span>
-            )}
-          </div>
+          )}
 
           {/* Invitation Copy bar (Google Docs / Notion style) */}
           <div className="bg-[#FFFFFF] border border-[#ECE6DD] p-5 rounded-2xl flex flex-col gap-3.5 shadow-sm">

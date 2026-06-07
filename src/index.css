@@ -1,20 +1,60 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #FAF7F2;
+  --card-default: rgba(255, 255, 255, 0.8);
+  --card: #FFFFFF;
+  --border: #ECE6DD;
+  --card-hover-border: rgba(255, 122, 48, 0.25);
+  
+  --primary: #FF7A30;
+  --primary-hover: #FF8C42;
+  --primary-light: #FFF0E7;
+  --primary-glow: rgba(255, 122, 48, 0.12);
+  
+  --bg-secondary: #F4EFE8;
+  
+  --text-main: #1E1E1E;
+  --text-muted: #6D6D6D;
+  --text-light: #8B8B8B;
+}
+
+.dark {
+  --background: #0F172A;
+  --card-default: rgba(31, 41, 55, 0.85);
+  --card: #1F2937;
+  --border: rgba(255, 255, 255, 0.08);
+  --card-hover-border: rgba(255, 140, 66, 0.3);
+  
+  --primary: #FF8C42;
+  --primary-hover: #FFA066;
+  --primary-light: #1A120E;
+  --primary-glow: rgba(255, 140, 66, 0.12);
+  
+  --bg-secondary: #111827;
+  
+  --text-main: #FFFFFF;
+  --text-muted: #D1D5DB;
+  --text-light: #9CA3AF;
+}
+
 @theme {
-  --color-background: #FAF7F2;
-  --color-card-default: rgba(255, 255, 255, 0.8);
-  --color-card-border: #ECE6DD;
-  --color-card-hover-border: rgba(255, 122, 48, 0.25);
+  --color-background: var(--background);
+  --color-card-default: var(--card-default);
+  --color-card-border: var(--border);
+  --color-card-hover-border: var(--card-hover-border);
   
-  --color-zesto-coral: #FF7A30;
-  --color-zesto-coral-hover: #FF8C42;
-  --color-zesto-coral-light: #FFF0E7;
-  --color-zesto-coral-glow: rgba(255, 122, 48, 0.12);
+  --color-zesto-coral: var(--primary);
+  --color-zesto-coral-hover: var(--primary-hover);
+  --color-zesto-coral-light: var(--primary-light);
+  --color-zesto-coral-glow: var(--primary-glow);
   
-  --color-zesto-dark: #FAF7F2;
-  --color-zesto-dark-card: #FFFFFF;
-  --color-zesto-dark-card-light: #F4EFE8;
-  --color-zesto-dark-border: #ECE6DD;
+  --color-zesto-dark: var(--background);
+  --color-zesto-dark-card: var(--card);
+  --color-zesto-dark-card-light: var(--bg-secondary);
+  --color-zesto-dark-border: var(--border);
   
   --color-zesto-green: #4CAF50;
   --color-zesto-red: #E85D5D;
@@ -44,14 +84,17 @@
   html {
     scroll-behavior: initial;
     font-family: 'Inter', sans-serif;
+    transition: background-color 0.3s ease;
   }
   
   body {
-    background-color: #FAF7F2;
-    color: #1E1E1E;
+    background: linear-gradient(180deg, #FAF7F2 0%, #F6F0E8 50%, #EFE7DD 100%);
+    background-attachment: fixed;
+    color: var(--text-main);
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background 0.3s ease, background-color 0.3s ease, color 0.3s ease;
   }
 
   /* Custom high-end scrollbar */
@@ -59,19 +102,21 @@
     width: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: #FAF7F2;
+    background: var(--background);
+    transition: background-color 0.3s ease;
   }
   ::-webkit-scrollbar-thumb {
-    background: #ECE6DD;
+    background: var(--border);
     border-radius: 4px;
-    border: 2px solid #FAF7F2;
+    border: 2px solid var(--background);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #D8CFBF;
+    background: var(--text-light);
   }
 
   ::selection {
-    background-color: #FF7A30;
+    background-color: var(--primary);
     color: #FFFFFF;
   }
 }
@@ -114,12 +159,13 @@
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid #ECE6DD;
+  border: 1px solid var(--border);
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .glass-card-hover:hover {
   background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(255, 122, 48, 0.25);
+  border-color: var(--card-hover-border);
   box-shadow: 0 10px 30px -10px rgba(255, 122, 48, 0.1);
 }
 
@@ -127,7 +173,8 @@
   background: rgba(250, 247, 242, 0.75);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid #ECE6DD;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .orange-gradient-bg {
@@ -141,4 +188,98 @@
 .grid-bg {
   background-image: radial-gradient(rgba(30, 30, 30, 0.03) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+/* Dark Mode Hex Utility Overrides for Instant Adaptation */
+.dark body {
+  background: var(--background) !important;
+  background-color: var(--background) !important;
+  color: var(--text-main) !important;
+}
+
+/* Background Overrides */
+.dark .bg-\[\#FAF7F2\], .dark .bg-gradient-to-b {
+  background: var(--background) !important;
+  background-color: var(--background) !important;
+}
+.dark .bg-white, .dark .bg-\[\#FFFFFF\] {
+  background-color: var(--card) !important;
+}
+.dark .bg-\[\#F4EFE8\] {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Border Overrides */
+.dark .border-\[\#ECE6DD\] {
+  border-color: var(--border) !important;
+}
+.dark .border-\[\#ECE6DD\]\/60 {
+  border-color: rgba(55, 65, 81, 0.6) !important;
+}
+
+/* Text Overrides */
+.dark .text-\[\#1E1E1E\] {
+  color: var(--text-main) !important;
+}
+.dark .text-\[\#6D6D6D\] {
+  color: var(--text-muted) !important;
+}
+.dark .text-\[\#8B8B8B\] {
+  color: var(--text-light) !important;
+}
+.dark .text-\[\#FF7A30\] {
+  color: var(--primary) !important;
+}
+
+/* Primary Color Bg/Border Overrides */
+.dark .bg-\[\#FF7A30\] {
+  background-color: var(--primary) !important;
+}
+.dark .bg-\[\#FF7A30\]\/5 {
+  background-color: rgba(255, 140, 66, 0.05) !important;
+}
+.dark .bg-\[\#FF7A30\]\/10 {
+  background-color: rgba(255, 140, 66, 0.1) !important;
+}
+.dark .border-\[\#FF7A30\] {
+  border-color: var(--primary) !important;
+}
+.dark .border-\[\#FF7A30\]\/10 {
+  border-color: rgba(255, 140, 66, 0.1) !important;
+}
+.dark .border-\[\#FF7A30\]\/20 {
+  border-color: rgba(255, 140, 66, 0.2) !important;
+}
+.dark .border-\[\#FF7A30\]\/40 {
+  border-color: rgba(255, 140, 66, 0.4) !important;
+}
+
+/* Gradient overrides */
+.dark .from-\[\#FF7A30\] {
+  --tw-gradient-from: var(--primary) !important;
+  --tw-gradient-to: var(--primary-hover) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+.dark .to-\[\#FF8C42\] {
+  --tw-gradient-to: var(--primary-hover) !important;
+}
+
+/* Glass panel adaptation */
+.dark .glass-card {
+  background: rgba(10, 10, 10, 0.85) !important;
+  border-color: var(--border) !important;
+}
+.dark .glass-card-hover:hover {
+  background: rgba(15, 15, 15, 0.95) !important;
+  border-color: var(--card-hover-border) !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
+}
+.dark .glass-nav {
+  background: rgba(0, 0, 0, 0.85) !important;
+  border-color: var(--border) !important;
+}
+
+/* Grid bg in dark mode */
+.dark .grid-bg {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px) !important;
 }
