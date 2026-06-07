@@ -11,6 +11,45 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Meta tags for premium SEO -->
     <meta name="description" content="Zesto is the premium social food-tech platform where friend groups swipe restaurants, vote in real-time, and decide where to eat faster." />
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        var div = document.createElement('div');
+        div.style.position = 'fixed';
+        div.style.top = '0';
+        div.style.left = '0';
+        div.style.width = '100%';
+        div.style.background = 'red';
+        div.style.color = 'white';
+        div.style.zIndex = '999999';
+        div.style.padding = '20px';
+        div.style.fontSize = '14px';
+        div.style.fontFamily = 'monospace';
+        div.style.overflow = 'auto';
+        div.style.maxHeight = '50vh';
+        div.style.whiteSpace = 'pre-wrap';
+        div.innerHTML = '<strong>Runtime Error:</strong> ' + message + '<br>Source: ' + source + '<br>Line: ' + lineno + ':' + colno + '<br>Stack: ' + (error && error.stack ? error.stack : 'N/A');
+        document.body.appendChild(div);
+        return false;
+      };
+      window.addEventListener('unhandledrejection', function(event) {
+        var div = document.createElement('div');
+        div.style.position = 'fixed';
+        div.style.bottom = '0';
+        div.style.left = '0';
+        div.style.width = '100%';
+        div.style.background = 'darkred';
+        div.style.color = 'white';
+        div.style.zIndex = '999999';
+        div.style.padding = '20px';
+        div.style.fontSize = '14px';
+        div.style.fontFamily = 'monospace';
+        div.style.overflow = 'auto';
+        div.style.maxHeight = '50vh';
+        div.style.whiteSpace = 'pre-wrap';
+        div.innerHTML = '<strong>Unhandled Rejection:</strong> ' + (event.reason ? (event.reason.message || event.reason) : 'Unknown');
+        document.body.appendChild(div);
+      });
+    </script>
   </head>
   <body class="antialiased overflow-x-hidden">
     <div id="root"></div>
