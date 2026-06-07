@@ -19,4 +19,12 @@ const app = initializeApp(firebaseConfig)
 // Export Auth services
 export const auth = getAuth(app)
 export const googleProvider = new GoogleAuthProvider()
-export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null
+export const analytics = typeof window !== 'undefined' ? (() => {
+  try {
+    return getAnalytics(app)
+  } catch (error) {
+    console.warn("Firebase Analytics is not supported or blocked in this environment:", error)
+    return null
+  }
+})() : null
+
